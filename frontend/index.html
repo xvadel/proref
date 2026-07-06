@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Personalized Prompt Refiner — Transform vague prompts into precise, domain-specific prompts using RAG and AI.">
+    <title>Prompt Refiner — AI-Powered Prompt Engineering</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* ────────────────────────────────────────────────────────
+           Design System — CSS Custom Properties
+        ──────────────────────────────────────────────────────── */
+        :root {
+            /* Backgrounds */
+            --bg-primary: #07070e;
+            --bg-secondary: #0d0d1a;
+            --bg-card: rgba(15, 15, 30, 0.7);
+            --bg-card-hover: rgba(20, 20, 42, 0.8);
+            --bg-input: rgba(12, 12, 28, 0.9);
+
+            /* Accent gradients */
+            --accent-primary: #6c5ce7;
+            --accent-secondary: #00cec9;
+            --accent-tertiary: #fd79a8;
+            --gradient-primary: linear-gradient(135deg, #6c5ce7, #00cec9);
+            --gradient-secondary: linear-gradient(135deg, #fd79a8, #6c5ce7);
+            --gradient-glow: linear-gradient(135deg, rgba(108,92,231,0.15), rgba(0,206,201,0.15));
+
+            /* Text */
+            --text-primary: #e8e6f0;
+            --text-secondary: #9895a8;
+            --text-muted: #5f5c6e;
+
+            /* Borders */
+            --border-subtle: rgba(108, 92, 231, 0.15);
+            --border-focus: rgba(108, 92, 231, 0.5);
+
+            /* Spacing */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Reset & Base
+        ──────────────────────────────────────────────────────── */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Subtle animated background gradient */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 20% 20%, rgba(108,92,231,0.08), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0,206,201,0.06), transparent),
+                radial-gradient(ellipse 50% 50% at 50% 50%, rgba(253,121,168,0.04), transparent);
+            pointer-events: none;
+            z-index: 0;
+            animation: bgShift 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes bgShift {
+            0%   { opacity: 0.8; }
+            50%  { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Layout
+        ──────────────────────────────────────────────────────── */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Header
+        ──────────────────────────────────────────────────────── */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .header__badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: var(--gradient-glow);
+            border: 1px solid var(--border-subtle);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--accent-secondary);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .header__badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--accent-secondary);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .header p {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Cards (Glass)
+        ──────────────────────────────────────────────────────── */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            padding: 32px;
+            margin-bottom: 28px;
+            transition: border-color var(--transition-smooth), box-shadow var(--transition-smooth);
+        }
+
+        .card:hover {
+            border-color: rgba(108, 92, 231, 0.25);
+            box-shadow: 0 8px 32px rgba(108, 92, 231, 0.08);
+        }
+
+        .card__title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        .card__title-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Form Elements
+        ──────────────────────────────────────────────────────── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group--full {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+            outline: none;
+        }
+
+        input::placeholder, textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.12);
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239895a8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+
+        select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Buttons
+        ──────────────────────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn--primary {
+            background: var(--gradient-primary);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(108, 92, 231, 0.3);
+        }
+
+        .btn--primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(108, 92, 231, 0.4);
+        }
+
+        .btn--primary:active {
+            transform: translateY(0);
+        }
+
+        .btn--secondary {
+            background: transparent;
+            color: var(--accent-secondary);
+            border: 1px solid rgba(0, 206, 201, 0.3);
+        }
+
+        .btn--secondary:hover {
+            background: rgba(0, 206, 201, 0.08);
+            border-color: rgba(0, 206, 201, 0.5);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn__spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            display: none;
+        }
+
+        .btn--loading .btn__spinner { display: block; }
+        .btn--loading .btn__text { opacity: 0.7; }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Refine Section
+        ──────────────────────────────────────────────────────── */
+        .refine-input {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .refine-input textarea {
+            min-height: 100px;
+            font-size: 1rem;
+        }
+
+        .refine-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .refine-actions .user-id-display {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .refine-actions .user-id-display strong {
+            color: var(--accent-secondary);
+            font-weight: 500;
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Results
+        ──────────────────────────────────────────────────────── */
+        .result {
+            display: none;
+            margin-top: 28px;
+            animation: fadeSlideIn 0.5s ease forwards;
+        }
+
+        .result.visible {
+            display: block;
+        }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .result__section {
+            margin-bottom: 24px;
+        }
+
+        .result__label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 8px;
+        }
+
+        .result__refined-prompt {
+            position: relative;
+            background: rgba(108, 92, 231, 0.06);
+            border: 1px solid rgba(108, 92, 231, 0.2);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 6px 12px;
+            background: rgba(108, 92, 231, 0.15);
+            border: 1px solid rgba(108, 92, 231, 0.25);
+            border-radius: var(--radius-sm);
+            color: var(--accent-primary);
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .copy-btn:hover {
+            background: rgba(108, 92, 231, 0.25);
+        }
+
+        .result__explanation {
+            background: rgba(0, 206, 201, 0.06);
+            border: 1px solid rgba(0, 206, 201, 0.15);
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Tags */
+        .result__tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .tag--technique {
+            background: rgba(108, 92, 231, 0.12);
+            color: #a29bfe;
+            border: 1px solid rgba(108, 92, 231, 0.2);
+        }
+
+        .tag--domain {
+            background: rgba(0, 206, 201, 0.12);
+            color: #81ecec;
+            border: 1px solid rgba(0, 206, 201, 0.2);
+        }
+
+        .tag__icon {
+            font-size: 0.85rem;
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Status Messages
+        ──────────────────────────────────────────────────────── */
+        .status {
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 16px;
+            display: none;
+            animation: fadeSlideIn 0.3s ease forwards;
+        }
+
+        .status.visible { display: block; }
+
+        .status--success {
+            background: rgba(0, 206, 201, 0.1);
+            border: 1px solid rgba(0, 206, 201, 0.2);
+            color: var(--accent-secondary);
+        }
+
+        .status--error {
+            background: rgba(253, 121, 168, 0.1);
+            border: 1px solid rgba(253, 121, 168, 0.2);
+            color: var(--accent-tertiary);
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Section Divider
+        ──────────────────────────────────────────────────────── */
+        .divider {
+            height: 1px;
+            background: var(--gradient-primary);
+            opacity: 0.15;
+            margin: 12px 0;
+            border-radius: 1px;
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Footer
+        ──────────────────────────────────────────────────────── */
+        .footer {
+            text-align: center;
+            padding: 24px 0 0;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        /* ────────────────────────────────────────────────────────
+           Responsive
+        ──────────────────────────────────────────────────────── */
+        @media (max-width: 640px) {
+            .app-container { padding: 24px 16px 60px; }
+            .header h1 { font-size: 1.8rem; }
+            .form-grid { grid-template-columns: 1fr; }
+            .card { padding: 24px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ─── Header ─── -->
+        <header class="header">
+            <div class="header__badge">RAG-Powered</div>
+            <h1>Prompt Refiner</h1>
+            <p>Transform vague prompts into precise, domain-specific prompts — with a clear explanation of <em>why</em> the refined version is better.</p>
+        </header>
+
+        <!-- ─── Onboarding Card ─── -->
+        <section class="card" id="onboarding-card">
+            <div class="card__title">
+                <span class="card__title-icon">👤</span>
+                Profile Setup
+            </div>
+            <form id="onboard-form" class="form-grid">
+                <div class="form-group">
+                    <label for="user-id">User ID</label>
+                    <input type="text" id="user-id" placeholder="e.g. alice_dev" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="domain">Domain</label>
+                    <select id="domain" required>
+                        <option value="" disabled selected>Choose your domain</option>
+                        <option value="dev">Software Development</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="data_analysis">Data Analysis</option>
+                    </select>
+                </div>
+
+                <div class="form-group form-group--full">
+                    <label for="interests">Interests <span style="text-transform:none;color:var(--text-muted)">(comma-separated)</span></label>
+                    <input type="text" id="interests" placeholder="e.g. python, rag, fastapi, machine learning">
+                </div>
+
+                <div class="form-group form-group--full">
+                    <label for="bio">Bio <span style="text-transform:none;color:var(--text-muted)">(optional)</span></label>
+                    <textarea id="bio" rows="3" placeholder="Tell us a bit about yourself and what you're working on..."></textarea>
+                </div>
+
+                <div class="form-group form-group--full form-actions">
+                    <button type="submit" class="btn btn--primary" id="onboard-btn">
+                        <span class="btn__spinner"></span>
+                        <span class="btn__text">Save Profile</span>
+                    </button>
+                </div>
+            </form>
+            <div class="status" id="onboard-status"></div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- ─── Refine Card ─── -->
+        <section class="card" id="refine-card">
+            <div class="card__title">
+                <span class="card__title-icon">✨</span>
+                Refine Your Prompt
+            </div>
+            <div class="refine-input">
+                <div class="form-group">
+                    <label for="raw-prompt">Your Rough Prompt</label>
+                    <textarea id="raw-prompt" rows="4" placeholder="Type a vague or rough prompt here... e.g. 'write me something about marketing'" required></textarea>
+                </div>
+                <div class="refine-actions">
+                    <button class="btn btn--primary" id="refine-btn" disabled>
+                        <span class="btn__spinner"></span>
+                        <span class="btn__text">Refine Prompt</span>
+                    </button>
+                    <span class="user-id-display" id="active-user">No profile saved yet</span>
+                </div>
+            </div>
+            <div class="status" id="refine-status"></div>
+
+            <!-- Results -->
+            <div class="result" id="result">
+                <div class="divider" style="margin: 28px 0"></div>
+
+                <div class="result__section">
+                    <div class="result__label">Refined Prompt</div>
+                    <div class="result__refined-prompt" id="refined-prompt-text">
+                        <button class="copy-btn" id="copy-btn" title="Copy to clipboard">📋 Copy</button>
+                    </div>
+                </div>
+
+                <div class="result__section">
+                    <div class="result__label">Why It's Better</div>
+                    <div class="result__explanation" id="explanation-text"></div>
+                </div>
+
+                <div class="result__section">
+                    <div class="result__label">Applied Techniques</div>
+                    <div class="result__tags">
+                        <span class="tag tag--technique">
+                            <span class="tag__icon">🧠</span>
+                            <span id="technique-tag">—</span>
+                        </span>
+                        <span class="tag tag--domain">
+                            <span class="tag__icon">🎯</span>
+                            <span id="domain-tag">—</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            Prompt Refiner — RAG + LLM Portfolio Project · Built with FastAPI, ChromaDB &amp; Sentence Transformers
+        </footer>
+    </div>
+
+    <!-- ─── JavaScript ─── -->
+    <script>
+        // ──────────────────────────────────────────────────
+        // State
+        // ──────────────────────────────────────────────────
+        let activeUserId = null;
+
+        // ──────────────────────────────────────────────────
+        // DOM References
+        // ──────────────────────────────────────────────────
+        const onboardForm   = document.getElementById('onboard-form');
+        const onboardBtn    = document.getElementById('onboard-btn');
+        const onboardStatus = document.getElementById('onboard-status');
+        const refineBtn     = document.getElementById('refine-btn');
+        const refineStatus  = document.getElementById('refine-status');
+        const resultDiv     = document.getElementById('result');
+        const activeUserEl  = document.getElementById('active-user');
+        const copyBtn       = document.getElementById('copy-btn');
+
+        // ──────────────────────────────────────────────────
+        // Helpers
+        // ──────────────────────────────────────────────────
+
+        /**
+         * Show a status message below a form section.
+         * @param {HTMLElement} el  - The status element
+         * @param {string} message  - Text to display
+         * @param {string} type     - "success" or "error"
+         */
+        function showStatus(el, message, type) {
+            el.textContent = message;
+            el.className = `status visible status--${type}`;
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => { el.classList.remove('visible'); }, 5000);
+            }
+        }
+
+        /**
+         * Toggle loading state on a button.
+         */
+        function setLoading(btn, loading) {
+            btn.disabled = loading;
+            btn.classList.toggle('btn--loading', loading);
+        }
+
+        // ──────────────────────────────────────────────────
+        // Onboarding
+        // ──────────────────────────────────────────────────
+        onboardForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const userId    = document.getElementById('user-id').value.trim();
+            const domain    = document.getElementById('domain').value;
+            const interests = document.getElementById('interests').value
+                                .split(',')
+                                .map(s => s.trim())
+                                .filter(Boolean);
+            const bio       = document.getElementById('bio').value.trim() || null;
+
+            if (!userId || !domain) {
+                showStatus(onboardStatus, 'Please fill in User ID and Domain.', 'error');
+                return;
+            }
+
+            setLoading(onboardBtn, true);
+
+            try {
+                const res = await fetch('/onboard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, domain, interests, bio }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || `HTTP ${res.status}`);
+                }
+
+                const data = await res.json();
+                activeUserId = data.user_id;
+
+                // Enable the refine button and show the active user
+                refineBtn.disabled = false;
+                activeUserEl.innerHTML = `Profile active: <strong>${activeUserId}</strong>`;
+
+                showStatus(onboardStatus, `✅ Profile saved for "${activeUserId}".`, 'success');
+            } catch (err) {
+                showStatus(onboardStatus, `❌ ${err.message}`, 'error');
+            } finally {
+                setLoading(onboardBtn, false);
+            }
+        });
+
+        // ──────────────────────────────────────────────────
+        // Prompt Refinement
+        // ──────────────────────────────────────────────────
+        refineBtn.addEventListener('click', async () => {
+            const rawPrompt = document.getElementById('raw-prompt').value.trim();
+
+            if (!rawPrompt) {
+                showStatus(refineStatus, 'Please enter a prompt to refine.', 'error');
+                return;
+            }
+
+            if (!activeUserId) {
+                showStatus(refineStatus, 'Please save your profile first.', 'error');
+                return;
+            }
+
+            setLoading(refineBtn, true);
+            resultDiv.classList.remove('visible');
+
+            try {
+                const res = await fetch('/refine', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: activeUserId, raw_prompt: rawPrompt }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || `HTTP ${res.status}`);
+                }
+
+                const data = await res.json();
+
+                // Populate the result card
+                document.getElementById('refined-prompt-text').childNodes[0].textContent = data.refined_prompt;
+                document.getElementById('explanation-text').textContent = data.explanation;
+                document.getElementById('technique-tag').textContent = data.technique_used;
+                document.getElementById('domain-tag').textContent = data.domain_tip_used;
+
+                // Show result with animation
+                resultDiv.classList.add('visible');
+                refineStatus.classList.remove('visible');
+
+            } catch (err) {
+                showStatus(refineStatus, `❌ ${err.message}`, 'error');
+            } finally {
+                setLoading(refineBtn, false);
+            }
+        });
+
+        // ──────────────────────────────────────────────────
+        // Copy to Clipboard
+        // ──────────────────────────────────────────────────
+        copyBtn.addEventListener('click', async () => {
+            // Get just the prompt text (first child text node), not the button text
+            const promptEl = document.getElementById('refined-prompt-text');
+            const text = promptEl.childNodes[0].textContent.trim();
+
+            try {
+                await navigator.clipboard.writeText(text);
+                copyBtn.textContent = '✅ Copied!';
+                setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+            } catch {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                copyBtn.textContent = '✅ Copied!';
+                setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+            }
+        });
+
+        // Allow Ctrl+Enter to submit the refine prompt
+        document.getElementById('raw-prompt').addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                refineBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>

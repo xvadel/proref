@@ -1,0 +1,20 @@
+[
+  {
+    "id": "dev_tech_stack",
+    "domain": "dev",
+    "title": "Specify Tech Stack & Constraints",
+    "guidance": "Always state the programming language, framework, version, and any architectural constraints (e.g., 'Python 3.12, FastAPI, must be async, PostgreSQL backend'). LLMs default to generic or outdated patterns without this context. Include deployment target (Docker, serverless, etc.) if relevant, as it affects code structure. Mentioning the tech stack upfront eliminates irrelevant suggestions and produces copy-paste-ready code."
+  },
+  {
+    "id": "dev_error_debug",
+    "domain": "dev",
+    "title": "Error-First Debugging Prompts",
+    "guidance": "When debugging, always include: (1) the exact error message or unexpected behavior, (2) the relevant code snippet, (3) what you expected to happen, and (4) what you already tried. This 'error-first' structure mimics a good bug report and gives the LLM maximum signal to diagnose the issue. Avoid vague descriptions like 'it doesn't work' — specificity is the difference between a useful fix and a generic troubleshooting checklist."
+  },
+  {
+    "id": "dev_code_review",
+    "domain": "dev",
+    "title": "Code Review Rubric Framing",
+    "guidance": "When asking for code review or improvement suggestions, specify the review criteria: performance, readability, security, test coverage, error handling, or adherence to a style guide. Without a rubric, the LLM will give surface-level feedback. For example: 'Review this function for edge cases, error handling, and performance. Suggest specific improvements with code examples.' A focused review rubric produces actionable feedback instead of generic praise."
+  }
+]

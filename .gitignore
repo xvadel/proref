@@ -1,0 +1,15 @@
+# Environment variables (contains API keys)
+.env
+
+# ChromaDB persistent storage
+chroma_db/
+
+# Python virtual environment
+venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# User profile data (generated at runtime)
+user_profiles/*.json

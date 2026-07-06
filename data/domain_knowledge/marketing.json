@@ -1,0 +1,20 @@
+[
+  {
+    "id": "marketing_audience_first",
+    "domain": "marketing",
+    "title": "Anchor to a Specific Audience Segment",
+    "guidance": "Always specify the target audience before describing the content you need. Include demographics, psychographics, pain points, and where they are in the buyer journey (awareness, consideration, decision). For example: 'Write for SaaS founders, Series A stage, who are frustrated with high churn rates and are evaluating retention tools.' A well-defined audience transforms generic marketing copy into resonant, conversion-focused messaging."
+  },
+  {
+    "id": "marketing_cta_driven",
+    "domain": "marketing",
+    "title": "Define the Call-to-Action First",
+    "guidance": "Start with the desired action: what should the reader do after consuming this content? Sign up, book a demo, share with a colleague, download a resource? Work backwards from the CTA to structure the content. This ensures every sentence serves the conversion goal rather than just filling space. Include the specific CTA text you want and any constraints (e.g., 'no aggressive sales language, keep it educational')."
+  },
+  {
+    "id": "marketing_brand_voice",
+    "domain": "marketing",
+    "title": "Specify Brand Voice & Tone",
+    "guidance": "Describe your brand voice using 3-4 adjectives and provide a short example of your existing tone. For example: 'Our voice is confident, witty, and approachable — like a smart friend who works in tech. Example: We don't say \"leverage synergies,\" we say \"make things work better together.\"' Without voice guidance, LLMs default to a bland corporate tone that dilutes brand identity. Include any words or phrases to avoid."
+  }
+]

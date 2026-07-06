@@ -1,0 +1,50 @@
+[
+  {
+    "id": "role_setting",
+    "title": "Role / Persona Setting",
+    "when_to_use": "When the task benefits from domain expertise, a specific tone, or a professional perspective. Especially useful when the user wants output that sounds like it came from a specialist rather than a generic assistant.",
+    "technique": "Assign the LLM a specific role or persona at the start of the prompt. For example: 'You are a senior backend engineer with 10 years of experience in distributed systems.' This primes the model to draw on relevant knowledge patterns and adopt an appropriate communication style.",
+    "example_before": "How do I make my website faster?",
+    "example_after": "You are a senior web performance engineer. Analyze the most common causes of slow page load times for a React single-page application and provide a prioritized list of optimizations, including estimated impact for each."
+  },
+  {
+    "id": "specificity_constraints",
+    "title": "Specificity & Constraints",
+    "when_to_use": "When the raw prompt is too open-ended and could produce a vague or overly broad response. Adding constraints on format, length, scope, or audience dramatically improves output quality.",
+    "technique": "Add explicit boundaries to the prompt: specify the desired format (bullet list, table, essay), length (under 200 words, 3 paragraphs), audience (beginners, executives, developers), and scope (only cover X, exclude Y). Constraints force the model to focus and produce actionable output.",
+    "example_before": "Tell me about machine learning.",
+    "example_after": "Explain the three most common types of machine learning (supervised, unsupervised, reinforcement) in a comparison table with columns: Type, How It Learns, Best Use Case, Real-World Example. Keep each cell under 20 words. Target audience: non-technical product managers."
+  },
+  {
+    "id": "few_shot_examples",
+    "title": "Few-Shot Examples",
+    "when_to_use": "When you need the output to follow a very specific pattern, style, or structure that is hard to describe in words alone. Particularly effective for classification, formatting, and creative tasks where showing is easier than telling.",
+    "technique": "Include 2-3 concrete input/output examples directly in the prompt before stating the actual task. This teaches the model the exact pattern you expect. Label examples clearly with 'Example 1:', 'Example 2:', then 'Now do this:'.",
+    "example_before": "Categorize these customer reviews as positive or negative.",
+    "example_after": "Categorize each customer review as Positive, Negative, or Mixed. Here are examples:\n\nReview: 'Love the battery life but the screen is dim.' → Mixed\nReview: 'Absolute garbage, returned it immediately.' → Negative\nReview: 'Best purchase I've made this year!' → Positive\n\nNow categorize these reviews:\n1. 'It works fine but nothing special.'\n2. 'Customer support was incredibly helpful and fast.'"
+  },
+  {
+    "id": "chain_of_thought",
+    "title": "Chain-of-Thought / Step-by-Step",
+    "when_to_use": "When the task involves reasoning, calculation, multi-step analysis, or any problem where jumping straight to the answer risks errors. Forces the model to 'show its work' and produce more accurate results.",
+    "technique": "Instruct the model to think through the problem step by step before giving a final answer. Use phrases like 'Think step by step', 'Walk through your reasoning', or 'First analyze X, then consider Y, finally conclude Z'. This activates more careful reasoning in the model.",
+    "example_before": "Should I use a SQL or NoSQL database for my app?",
+    "example_after": "I'm building a social media app that needs to store user profiles, posts, comments, and real-time notifications. Expected scale: 100K users in year one. Help me decide between SQL and NoSQL by walking through these steps:\n1. Analyze the data relationships in my use case\n2. Consider the read/write patterns for each feature\n3. Evaluate scalability requirements\n4. Give your recommendation with specific database suggestions and reasoning"
+  },
+  {
+    "id": "goal_success_criteria",
+    "title": "Goal & Success Criteria",
+    "when_to_use": "When the user has a clear objective but the prompt doesn't communicate what 'good' looks like. Defining success criteria up front helps the model self-evaluate and produce output that actually meets the user's needs.",
+    "technique": "State the goal explicitly and define what a successful response looks like. For example: 'The goal is to write a project proposal. A good response will: (1) clearly state the problem, (2) propose a solution with timeline, (3) include a rough cost estimate, (4) be under 500 words.' This gives the model a rubric to follow.",
+    "example_before": "Write me a project proposal.",
+    "example_after": "Write a project proposal for migrating our company's monolithic Python app to microservices. The goal is to convince the VP of Engineering to approve the project. A successful proposal must: (1) summarize the current pain points in 2-3 sentences, (2) outline the migration strategy in phases, (3) estimate timeline and team size needed, (4) address the top 2 risks with mitigations. Keep it under 400 words and use a professional but direct tone."
+  },
+  {
+    "id": "iterative_draft",
+    "title": "Iterative / Draft Framing",
+    "when_to_use": "When the task is complex or creative and a single pass is unlikely to produce the best result. Useful for writing, design, strategy, and any task where refinement improves quality.",
+    "technique": "Frame the request as a multi-pass process: ask for a first draft, then specify how to refine it. For example: 'First, create an outline. Then expand each section. Finally, review for clarity and cut any fluff.' This mimics how humans actually produce high-quality work and leads to more polished output.",
+    "example_before": "Write a blog post about AI trends.",
+    "example_after": "Let's write a blog post about the top 3 AI trends for 2025 in three passes:\n\nPass 1: Create a detailed outline with the main argument for each trend and 2 supporting points each.\nPass 2: Expand the outline into a full 800-word blog post with an engaging hook and a forward-looking conclusion.\nPass 3: Review the draft — tighten any wordy sentences, ensure each paragraph transitions smoothly, and add one concrete example or statistic per trend."
+  }
+]

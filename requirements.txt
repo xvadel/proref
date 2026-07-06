@@ -1,0 +1,27 @@
+# ──────────────────────────────────────────────────────────────
+# PROREF — Python Dependencies
+# ──────────────────────────────────────────────────────────────
+# Install: pip install -r requirements.txt
+# ──────────────────────────────────────────────────────────────
+
+# Web framework & server
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+
+# Vector database (local, persistent, no external server)
+chromadb>=0.5.0
+
+# Local embeddings (all-MiniLM-L6-v2, ~80MB download on first run)
+sentence-transformers>=2.7.0
+
+# Data validation
+pydantic>=2.7.0
+
+# Environment variable loading
+python-dotenv>=1.0.0
+
+# Groq LLM SDK (free tier)
+groq>=0.9.0
+
+# HTTP client (for Ollama REST API fallback)
+requests>=2.31.0

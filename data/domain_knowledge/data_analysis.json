@@ -1,0 +1,20 @@
+[
+  {
+    "id": "data_shape_first",
+    "domain": "data_analysis",
+    "title": "State the Data Shape First",
+    "guidance": "Before asking any analytical question, describe your dataset: number of rows, column names and types, time range, and any known data quality issues (nulls, duplicates). For example: 'I have a CSV with 50K rows and columns: user_id (int), signup_date (datetime), plan_type (categorical: free/pro/enterprise), monthly_revenue (float), churn_date (datetime, nullable).' This context prevents the LLM from making wrong assumptions about your data structure and produces immediately usable code or queries."
+  },
+  {
+    "id": "data_hypothesis_driven",
+    "domain": "data_analysis",
+    "title": "Frame Analysis as Hypothesis Testing",
+    "guidance": "Instead of asking 'analyze this data,' state a specific hypothesis to test. For example: 'I hypothesize that users who complete onboarding within 24 hours have 30% lower churn. Help me design the analysis to test this, including: what metrics to compare, how to handle confounding variables, and what statistical test to use.' Hypothesis-driven prompts produce focused, actionable analyses rather than vague exploratory summaries."
+  },
+  {
+    "id": "data_output_format",
+    "domain": "data_analysis",
+    "title": "Specify Output Format & Tool",
+    "guidance": "Always state the tool (Python/pandas, SQL, R, Excel) and desired output format (table, chart type, summary statistics, dashboard). For example: 'Write a pandas script that produces a grouped bar chart (matplotlib) showing average revenue by plan_type and month, with error bars for standard deviation. Save as PNG at 300 DPI.' Without this, LLMs guess the tool and format, often producing output you can't directly use in your workflow."
+  }
+]
