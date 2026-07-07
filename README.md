@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/logo.png" alt="ProRef AI Logo" width="120" />
+  <img src="frontend/logo.png" alt="ProRef AI Logo" width="300" />
 </p>
 
 <h1 align="center">PROREF AI — Personalized Prompt Refiner</h1>
