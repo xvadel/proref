@@ -23,9 +23,9 @@ from app.rag import ingest_knowledge_base
 
 
 def main():
-    print("🔄 Re-ingesting knowledge base into ChromaDB...")
+    print("[*] Re-ingesting knowledge base into ChromaDB...")
     ingest_knowledge_base()
-    print("✅ Done! Knowledge base is up to date.")
+    print("[+] Done! Knowledge base is up to date.")
 
 
 if __name__ == "__main__":

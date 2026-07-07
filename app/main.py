@@ -40,11 +40,11 @@ async def lifespan(app: FastAPI):
     Startup: Ingest the knowledge base into ChromaDB.
     Shutdown: (nothing to clean up — ChromaDB persists to disk).
     """
-    print("🚀 Starting Personalized Prompt Refiner...")
+    print("[*] Starting Personalized Prompt Refiner...")
     ingest_knowledge_base()
-    print("✅ Ready to refine prompts!")
+    print("[+] Ready to refine prompts!")
     yield
-    print("👋 Shutting down.")
+    print("[*] Shutting down.")
 
 
 # ──────────────────────────────────────────────────────────────

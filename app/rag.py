@@ -63,7 +63,7 @@ def ingest_knowledge_base() -> None:
     """
     _ingest_prompt_techniques()
     _ingest_domain_knowledge()
-    print("✅ Knowledge base ingested into ChromaDB.")
+    print("[+] Knowledge base ingested into ChromaDB.")
 
 
 def _ingest_prompt_techniques() -> None:
@@ -91,7 +91,7 @@ def _ingest_prompt_techniques() -> None:
         })
 
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
-    print(f"  📚 Ingested {len(ids)} prompt techniques.")
+    print(f"  [i] Ingested {len(ids)} prompt techniques.")
 
 
 def _ingest_domain_knowledge() -> None:
@@ -114,7 +114,7 @@ def _ingest_domain_knowledge() -> None:
             })
 
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
-    print(f"  🌐 Ingested {len(ids)} domain knowledge entries.")
+    print(f"  [i] Ingested {len(ids)} domain knowledge entries.")
 
 
 # ──────────────────────────────────────────────────────────────
