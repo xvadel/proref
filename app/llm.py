@@ -251,3 +251,136 @@ Interests: {interests or 'Not specified'}
 Bio: {bio}
 {history_section}
 Now rewrite the raw prompt following the technique and domain tip above, personalized to this user's profile. Use the exact output format specified in your instructions."""
+
+
+# ──────────────────────────────────────────────────────────────
+# Arabic Translate + Refine Pipeline
+# ──────────────────────────────────────────────────────────────
+
+_TRANSLATE_SYSTEM_PROMPT = """You are a bilingual AI assistant fluent in Arabic and English.
+Your task is to translate an Arabic prompt into clear, natural English.
+
+RULES:
+- Produce a faithful, literal translation — do not add, remove, or interpret meaning.
+- Preserve the original intent and all specific details.
+- Output ONLY the English translation with no preamble, explanation, or quotes.
+"""
+
+_ARABIC_REFINE_SYSTEM_PROMPT = """You are an expert prompt engineer. Your task is to take an English translation of an originally Arabic prompt and rewrite it into a highly effective, specific, professional English prompt.
+
+You have been given:
+1. The original Arabic prompt (for reference and intent verification)
+2. Its English translation (the base text to refine)
+3. A PROMPT-ENGINEERING TECHNIQUE to apply
+4. A DOMAIN-SPECIFIC BEST PRACTICE relevant to the user's field
+5. The USER'S PROFILE (domain, interests, bio) for personalization
+
+RULES:
+- Rewrite the translated English prompt using the technique and domain tip.
+- Personalize it based on the user's domain, interests, and bio where relevant.
+- The refined prompt must be significantly more specific, actionable, and professional.
+- Write entirely in English — this is the desired output language.
+- Do NOT just add generic filler — every addition should serve a clear purpose.
+
+OUTPUT FORMAT (follow exactly):
+REFINED PROMPT: <your rewritten prompt here>
+WHY: <1-2 sentences explaining what specific changes you made and why they improve the prompt>
+"""
+
+
+def translate_prompt_to_english(arabic_prompt: str) -> str:
+    """
+    Translate an Arabic prompt to English literally.
+    Groq's llama-3.1-8b-instant handles Arabic natively — no extra library needed.
+    """
+    client = get_llm_client()
+    translation_user_msg = (
+        f"Translate the following Arabic prompt to English:\n\n{arabic_prompt}"
+    )
+    return client.chat(_TRANSLATE_SYSTEM_PROMPT, translation_user_msg).strip()
+
+
+def translate_and_refine(
+    arabic_prompt: str,
+    translated_english: str,
+    technique: dict,
+    domain_tip: dict,
+    user_profile: dict,
+    similar_past_prompts: list[str] | None = None,
+) -> tuple[str, str]:
+    """
+    Refine the translated English text using RAG-augmented context,
+    with reference to the original Arabic prompt.
+
+    Args:
+        arabic_prompt:        The original Arabic raw prompt.
+        translated_english:   The literal translation from translate_prompt_to_english().
+        technique:            Retrieved prompt-engineering technique (from ChromaDB).
+        domain_tip:           Retrieved domain-specific best practice.
+        user_profile:         The user's stored profile.
+        similar_past_prompts: Optional list of the user's past similar prompts.
+
+    Returns:
+        Tuple of (refined_prompt, explanation).
+    """
+    client = get_llm_client()
+
+    user_message = _build_arabic_refine_message(
+        arabic_prompt=arabic_prompt,
+        translated_english=translated_english,
+        technique=technique,
+        domain_tip=domain_tip,
+        user_profile=user_profile,
+        similar_past_prompts=similar_past_prompts or [],
+    )
+    response_text = client.chat(_ARABIC_REFINE_SYSTEM_PROMPT, user_message)
+    refined_prompt, explanation = parse_llm_response(response_text)
+
+    return refined_prompt, explanation
+
+
+def _build_arabic_refine_message(
+    arabic_prompt: str,
+    translated_english: str,
+    technique: dict,
+    domain_tip: dict,
+    user_profile: dict,
+    similar_past_prompts: list[str],
+) -> str:
+    """Assemble the Arabic-pipeline user message with translation + RAG context."""
+
+    interests = ", ".join(user_profile.get("interests", []))
+    bio = user_profile.get("bio", "Not provided")
+
+    history_section = ""
+    if similar_past_prompts:
+        formatted = "\n".join(f"  - {p}" for p in similar_past_prompts)
+        history_section = f"""
+## SIMILAR PAST PROMPTS FROM THIS USER (in English):
+{formatted}
+"""
+
+    return f"""## ORIGINAL ARABIC PROMPT:
+{arabic_prompt}
+
+## ENGLISH TRANSLATION:
+{translated_english}
+
+## PROMPT-ENGINEERING TECHNIQUE TO APPLY:
+**{technique.get('title', 'N/A')}**
+When to use: {technique.get('when_to_use', 'N/A')}
+How: {technique.get('technique', 'N/A')}
+Example before: {technique.get('example_before', 'N/A')}
+Example after: {technique.get('example_after', 'N/A')}
+
+## DOMAIN-SPECIFIC BEST PRACTICE:
+**{domain_tip.get('title', 'N/A')}**
+Guidance: {domain_tip.get('guidance', 'N/A')}
+
+## USER PROFILE:
+Domain: {user_profile.get('domain', 'N/A')}
+Interests: {interests or 'Not specified'}
+Bio: {bio}
+{history_section}
+Rewrite the English translation into a polished, professional, domain-specific prompt. Use the exact output format specified in your instructions."""
+

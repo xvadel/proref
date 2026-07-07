@@ -2,7 +2,7 @@
 Feedback module — stores refinement feedback and computes technique success rates.
 
 This module is the foundation of the learning loop:
-  1. Every /refine response gets a unique refinement_id.
+  1. Every /refine (and /translate-refine) response gets a unique refinement_id.
   2. The user can POST /feedback with a rating ("good" | "bad").
   3. /history/{user_id} returns a user's past refinements.
   4. compute_technique_success_rates() aggregates good/total ratios per technique
@@ -11,9 +11,13 @@ This module is the foundation of the learning loop:
 
 Storage: one JSONL file per user at feedback/{user_id}.jsonl  (append-only log,
 simple and durable — no database needed for a portfolio project).
+
+Security note: user_id is sanitized by the Pydantic validator in models.py before
+reaching this module, so _safe_user_id() is a defense-in-depth fallback only.
 """
 
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,9 +42,16 @@ def log_refinement(
     refined_prompt: str,
     technique_used: str,
     domain_tip_used: str,
+    domain: str = "dev",
+    source: str = "refine",
 ) -> str:
     """
     Append a new refinement entry to the user's feedback log.
+
+    Args:
+        domain:  The user's working domain — stored so maybe_promote_to_kb()
+                 can tag promoted entries to the correct domain collection.
+        source:  "refine" or "translate-refine" — tracks which pipeline produced this.
 
     Returns:
         refinement_id: a UUID that the client sends back with the rating.
@@ -53,6 +64,8 @@ def log_refinement(
         "refined_prompt": refined_prompt,
         "technique_used": technique_used,
         "domain_tip_used": domain_tip_used,
+        "domain": domain,                       # FIX: store actual domain for promotion
+        "source": source,
         "rating": None,          # populated later via POST /feedback
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -66,7 +79,7 @@ def record_feedback(refinement_id: str, user_id: str, rating: str) -> bool:
     Update the rating field of an existing refinement record.
 
     Args:
-        refinement_id: UUID returned by /refine.
+        refinement_id: UUID returned by /refine or /translate-refine.
         user_id:       Must match the user who made the refinement.
         rating:        "good" or "bad".
 
@@ -86,7 +99,6 @@ def record_feedback(refinement_id: str, user_id: str, rating: str) -> bool:
             break
 
     if updated:
-        # Rewrite the file with the updated record
         with open(log_path, "w", encoding="utf-8") as f:
             for rec in records:
                 f.write(json.dumps(rec, ensure_ascii=False) + "\n")
@@ -103,7 +115,6 @@ def get_user_history(user_id: str, limit: int = 20) -> list[dict]:
         limit:   Maximum number of records to return.
     """
     records = _read_records(user_id)
-    # Reverse so newest is first, then cap
     return list(reversed(records))[:limit]
 
 
@@ -124,7 +135,6 @@ def compute_technique_success_rates() -> dict[str, float]:
     good_counts: dict[str, int] = defaultdict(int)
     total_counts: dict[str, int] = defaultdict(int)
 
-    # Walk every user's feedback file
     for log_file in _FEEDBACK_DIR.glob("*.jsonl"):
         for line in log_file.read_text(encoding="utf-8").splitlines():
             if not line.strip():
@@ -138,7 +148,7 @@ def compute_technique_success_rates() -> dict[str, float]:
             rating = rec.get("rating")
 
             if not technique or rating is None:
-                continue  # skip unrated
+                continue
 
             total_counts[technique] += 1
             if rating == "good":
@@ -154,17 +164,19 @@ def compute_technique_success_rates() -> dict[str, float]:
 def update_chroma_success_rates() -> None:
     """
     Recompute success rates and write them back to the prompt_techniques
-    ChromaDB collection as metadata. Called on startup and after each feedback.
+    ChromaDB collection as metadata.
+
+    Called in a background thread after each /feedback POST so it does
+    not block the API response. Also called on server startup after ingestion.
 
     This is what makes retrieval feedback-aware: retrieve_technique() reads
     success_rate from metadata and uses it to rerank close candidates.
     """
-    # Import here to avoid circular import (rag imports feedback, feedback imports rag)
     from app.rag import _get_collection
 
     rates = compute_technique_success_rates()
     if not rates:
-        return  # No rated data yet — nothing to update
+        return
 
     collection = _get_collection("prompt_techniques")
     existing = collection.get(include=["metadatas", "documents"])
@@ -172,13 +184,11 @@ def update_chroma_success_rates() -> None:
     if not existing["ids"]:
         return
 
-    # Rebuild with updated success_rate metadata
     ids, documents, metadatas = [], [], []
     for i, doc_id in enumerate(existing["ids"]):
         meta = existing["metadatas"][i].copy()
         title = meta.get("title", "")
-        # Update success_rate if we have data for this technique; default 0.5
-        meta["success_rate"] = rates.get(title, 0.5)
+        meta["success_rate"] = rates.get(title, meta.get("success_rate", 0.5))
         ids.append(doc_id)
         documents.append(existing["documents"][i])
         metadatas.append(meta)
@@ -193,17 +203,18 @@ def update_chroma_success_rates() -> None:
 
 def maybe_promote_to_kb(record: dict) -> bool:
     """
-    If a refinement gets a "good" rating, consider promoting the
+    If a refinement gets a "good" rating, promote the
     (raw_prompt -> refined_prompt) pair into the KB as a new few-shot example.
 
-    Promotion criteria (conservative — avoids polluting the KB with noise):
+    Promotion criteria:
       - rating == "good"
-      - raw_prompt is at least 10 chars (not a trivial test)
+      - raw_prompt is at least 10 chars
       - refined_prompt is at least 30 chars
-      - The pair hasn't already been promoted (idempotent)
+      - The pair hasn't already been promoted (idempotent via doc_id check)
 
-    Promoted examples are appended to data/promoted_examples.jsonl and
-    upserted into the domain_knowledge collection as domain-tagged entries.
+    FIX: Uses record["domain"] (the user's actual domain) instead of always
+    tagging as "general" — this ensures promoted examples are retrievable
+    by the correct domain filter in retrieve_domain_tip().
 
     Returns:
         True if the record was promoted, False otherwise.
@@ -218,20 +229,16 @@ def maybe_promote_to_kb(record: dict) -> bool:
     if len(raw) < 10 or len(refined) < 30:
         return False
 
-    # Idempotency: use refinement_id as Chroma doc ID with "promoted_" prefix
     doc_id = f"promoted_{record['refinement_id']}"
     collection = _get_collection("domain_knowledge")
 
-    # Check if already promoted
     existing = collection.get(ids=[doc_id])
     if existing["ids"]:
-        return False  # already in KB
+        return False  # already promoted — idempotent
 
-    # Build a natural-language example entry
-    domain = record.get("domain_tip_used", "general")
-    # domain_tip_used is a title like "Specify Tech Stack & Constraints" —
-    # we'll tag it under the user's domain by reading the profile
-    # (for simplicity, we store it as a "validated_example" domain entry)
+    # FIX: use the actual user domain, not hardcoded "general"
+    domain = record.get("domain", "general")
+
     doc_text = (
         f"Validated example — Before: {raw} | "
         f"After: {refined} | "
@@ -239,22 +246,24 @@ def maybe_promote_to_kb(record: dict) -> bool:
         f"Tip: {record.get('domain_tip_used', '')}"
     )
     meta = {
-        "title": f"Validated example: {raw[:60]}...",
-        "domain": "general",  # searchable across all domains
-        "guidance": f"Technique: {record.get('technique_used','')}. "
-                    f"Good refinement of: '{raw[:80]}' → '{refined[:80]}'",
+        "title": f"Validated example: {raw[:60]}",
+        "domain": domain,
+        "guidance": (
+            f"Technique: {record.get('technique_used', '')}. "
+            f"Good refinement: '{raw[:80]}' -> '{refined[:80]}'"
+        ),
         "is_promoted": True,
         "source_refinement_id": record["refinement_id"],
     }
 
     collection.upsert(ids=[doc_id], documents=[doc_text], metadatas=[meta])
 
-    # Also persist to disk for auditability
+    # Persist to disk for auditability
     promoted_log = _PROJECT_ROOT / "data" / "promoted_examples.jsonl"
     with open(promoted_log, "a", encoding="utf-8") as f:
         f.write(json.dumps({**record, "chroma_id": doc_id}, ensure_ascii=False) + "\n")
 
-    print(f"[+] Promoted refinement {record['refinement_id'][:8]}... to knowledge base.")
+    print(f"[+] Promoted refinement {record['refinement_id'][:8]}... to domain '{domain}' KB.")
     return True
 
 
@@ -266,13 +275,12 @@ def embed_user_prompt_history(user_id: str, raw_prompt: str, domain: str) -> Non
     """
     Embed a user's raw prompt into the user_prompt_history ChromaDB collection.
 
-    This enables retrieve_similar_user_prompts() to find patterns in a user's
-    past prompts, which gets injected as context to the LLM for deeper personalization.
+    Call this AFTER retrieve_similar_user_prompts(), not before — otherwise
+    the current prompt can appear in its own history results.
     """
     from app.rag import _get_collection
 
     collection = _get_collection("user_prompt_history")
-    # Use a timestamp-based ID so we store multiple prompts per user
     doc_id = f"{user_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
     collection.upsert(
         ids=[doc_id],
@@ -285,13 +293,15 @@ def retrieve_similar_user_prompts(user_id: str, raw_prompt: str, n: int = 3) -> 
     """
     Find the user's past prompts most similar to the current one.
 
+    Call this BEFORE embed_user_prompt_history() to avoid the current
+    prompt polluting its own results.
+
     Returns a list of raw prompt strings (empty list if no history yet).
     """
     from app.rag import _get_collection
 
     collection = _get_collection("user_prompt_history")
 
-    # Check if user has any history
     existing = collection.get(where={"user_id": user_id})
     if not existing["ids"]:
         return []
@@ -303,8 +313,7 @@ def retrieve_similar_user_prompts(user_id: str, raw_prompt: str, n: int = 3) -> 
     )
 
     if results["documents"] and results["documents"][0]:
-        # Filter out the current prompt if it's an exact match
-        return [d for d in results["documents"][0] if d != raw_prompt]
+        return [d for d in results["documents"][0] if d.strip() != raw_prompt.strip()]
 
     return []
 
@@ -313,9 +322,17 @@ def retrieve_similar_user_prompts(user_id: str, raw_prompt: str, n: int = 3) -> 
 # Internal helpers
 # ──────────────────────────────────────────────────────────────
 
+def _safe_user_id(user_id: str) -> str:
+    """
+    Defense-in-depth sanitization of user_id for use in file paths.
+    Primary sanitization happens in the Pydantic validator in models.py.
+    """
+    return re.sub(r"[^a-zA-Z0-9_\-]", "_", user_id).strip("_") or "unknown"
+
+
 def _log_path(user_id: str) -> Path:
-    """Return the JSONL log file path for a user."""
-    return _FEEDBACK_DIR / f"{user_id}.jsonl"
+    """Return the JSONL log file path for a user (safe filename)."""
+    return _FEEDBACK_DIR / f"{_safe_user_id(user_id)}.jsonl"
 
 
 def _append_record(user_id: str, record: dict) -> None:

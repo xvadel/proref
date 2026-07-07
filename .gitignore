@@ -14,3 +14,9 @@ __pycache__/
 
 # User profile data (generated at runtime)
 user_profiles/*.json
+
+# Feedback logs (contain real user prompts — never commit)
+feedback/
+
+# Promoted examples log (generated at runtime from user sessions)
+data/promoted_examples.jsonl

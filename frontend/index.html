@@ -330,11 +330,17 @@
                     <div class="lg:col-span-7 space-y-gutter">
                         <div class="bg-surface-container-low border border-surface-border p-6 flex flex-col gap-4">
                             <div class="flex items-center justify-between">
-                                <label class="font-status-label text-status-label uppercase tracking-widest text-primary flex items-center gap-2">
+                                <label id="inputLabel" class="font-status-label text-status-label uppercase tracking-widest text-primary flex items-center gap-2">
                                     <span class="material-symbols-outlined text-sm">terminal</span>
                                     Rough Prompt Input
                                 </label>
-                                <span class="text-xs text-code-gray font-code-block" id="charCount">0 characters</span>
+                                <div class="flex items-center gap-4">
+                                    <div class="flex items-center gap-2 border border-surface-border px-2.5 py-1 bg-surface-container-high">
+                                        <input type="checkbox" id="arabicModeCheckbox" class="bg-terminal-bg border-surface-border text-primary focus:ring-0 focus:ring-offset-0 h-4 w-4" onchange="toggleArabicMode(this)" />
+                                        <label for="arabicModeCheckbox" class="font-status-label text-[10px] text-on-surface-variant cursor-pointer select-none">ARABIC MODE</label>
+                                    </div>
+                                    <span class="text-xs text-code-gray font-code-block" id="charCount">0 characters</span>
+                                </div>
                             </div>
                             <textarea id="rawPromptTextarea" class="w-full h-64 bg-terminal-bg border border-surface-border p-4 font-code-block text-on-surface placeholder:text-code-gray focus:border-primary focus:ring-0 transition-all resize-none" placeholder="Paste your unrefined prompt here..." oninput="updateCharCount()"></textarea>
                             
@@ -376,6 +382,17 @@
                                 <button class="text-on-surface-variant hover:text-primary transition-colors" onclick="copyRefinedPrompt()">
                                     <span class="material-symbols-outlined" id="copyBtnIcon">content_copy</span>
                                 </button>
+                            </div>
+
+                            <!-- English Translation Panel (Arabic Mode only) -->
+                            <div id="translationPanel" class="space-y-2 hidden">
+                                <h4 class="font-status-label text-xs uppercase text-on-surface-variant tracking-wider flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">translate</span>
+                                    English Translation
+                                </h4>
+                                <div class="bg-terminal-bg border border-surface-border p-4">
+                                    <p id="translationText" class="font-body-base text-sm text-on-background leading-relaxed"></p>
+                                </div>
                             </div>
 
                             <!-- Monospaced Code Block -->
@@ -625,6 +642,21 @@
             document.getElementById('charCount').innerText = `${txt.length} characters`;
         }
 
+        // Toggle Arabic Mode configurations
+        function toggleArabicMode(checkbox) {
+            const textarea = document.getElementById('rawPromptTextarea');
+            const label = document.getElementById('inputLabel');
+            if (checkbox.checked) {
+                textarea.dir = 'rtl';
+                textarea.placeholder = 'اكتب هنا باللغة العربية...';
+                label.innerHTML = '<span class="material-symbols-outlined text-sm">terminal</span> Arabic Prompt Input';
+            } else {
+                textarea.dir = 'ltr';
+                textarea.placeholder = 'Paste your unrefined prompt here...';
+                label.innerHTML = '<span class="material-symbols-outlined text-sm">terminal</span> Rough Prompt Input';
+            }
+        }
+
         // Call RAG + Refine Endpoint
         async function handleRefinement() {
             const rawPrompt = document.getElementById('rawPromptTextarea').value.trim();
@@ -633,6 +665,7 @@
             const text = document.getElementById('refineBtnText');
             const resultsCard = document.getElementById('resultsCard');
             const errorMsg = document.getElementById('refineErrorMsg');
+            const isArabic = document.getElementById('arabicModeCheckbox').checked;
 
             if (!rawPrompt) {
                 errorMsg.innerText = "Please write a prompt to refine.";
@@ -648,13 +681,15 @@
             btn.classList.add('opacity-70');
 
             try {
-                const res = await fetch('/refine', {
+                const endpoint = isArabic ? '/translate-refine' : '/refine';
+                const bodyPayload = isArabic 
+                    ? { user_id: activeUserId, arabic_prompt: rawPrompt }
+                    : { user_id: activeUserId, raw_prompt: rawPrompt };
+
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: activeUserId,
-                        raw_prompt: rawPrompt
-                    })
+                    body: JSON.stringify(bodyPayload)
                 });
 
                 if (!res.ok) {
@@ -664,6 +699,15 @@
 
                 const data = await res.json();
                 currentRefinementId = data.refinement_id;
+
+                // Set translation panel (Arabic Mode only)
+                const translationPanel = document.getElementById('translationPanel');
+                if (isArabic && data.translated_english) {
+                    document.getElementById('translationText').innerText = data.translated_english;
+                    translationPanel.classList.remove('hidden');
+                } else {
+                    translationPanel.classList.add('hidden');
+                }
 
                 // Set content
                 document.getElementById('refinedOutputPre').innerText = data.refined_prompt;
@@ -727,6 +771,15 @@
             document.getElementById('metatagsContainer').innerHTML = '<span class="bg-surface-container border border-surface-border text-on-surface-variant px-3 py-1 text-[10px] font-status-label uppercase tracking-tight">no refinement active</span>';
             document.getElementById('feedbackArea').classList.add('hidden');
             document.getElementById('refineErrorMsg').innerText = '';
+            
+            // Reset Arabic Mode
+            const arabicCheckbox = document.getElementById('arabicModeCheckbox');
+            if (arabicCheckbox) {
+                arabicCheckbox.checked = false;
+                toggleArabicMode(arabicCheckbox);
+            }
+            document.getElementById('translationPanel').classList.add('hidden');
+
             updateCharCount();
         }
 

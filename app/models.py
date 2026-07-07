@@ -2,14 +2,16 @@
 Pydantic request/response models for the Prompt Refiner API.
 
 Defines the data contracts for:
-  - POST /onboard      → OnboardRequest / OnboardResponse
-  - POST /refine       → RefineRequest  / RefineResponse
-  - POST /feedback     → FeedbackRequest / FeedbackResponse
-  - GET  /history/{id} → HistoryResponse
+  - POST /onboard           → OnboardRequest / OnboardResponse
+  - POST /refine            → RefineRequest  / RefineResponse
+  - POST /feedback          → FeedbackRequest / FeedbackResponse
+  - POST /translate-refine  → TranslateRefineRequest / TranslateRefineResponse
+  - GET  /history/{id}      → HistoryResponse
 """
 
+import re
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ──────────────────────────────────────────────────────────────
@@ -38,6 +40,18 @@ class OnboardRequest(BaseModel):
         description="Optional free-text biography. Used to further personalize refined prompts.",
     )
 
+    @field_validator("user_id")
+    @classmethod
+    def sanitize_user_id(cls, v: str) -> str:
+        """
+        Strip everything except alphanumerics, underscores, and hyphens.
+        Prevents path-traversal attacks when user_id is used to build file paths.
+        """
+        sanitized = re.sub(r"[^a-zA-Z0-9_\-]", "_", v).strip("_")
+        if not sanitized:
+            raise ValueError("user_id contains no valid characters.")
+        return sanitized
+
 
 class OnboardResponse(BaseModel):
     """Confirmation returned after successful onboarding."""
@@ -60,9 +74,17 @@ class RefineRequest(BaseModel):
     )
     raw_prompt: str = Field(
         ...,
-        min_length=1,
-        description="The rough, unrefined prompt the user wants improved.",
+        min_length=5,
+        description="The rough, unrefined prompt the user wants improved. Must be at least 5 characters.",
     )
+
+    @field_validator("user_id")
+    @classmethod
+    def sanitize_user_id(cls, v: str) -> str:
+        sanitized = re.sub(r"[^a-zA-Z0-9_\-]", "_", v).strip("_")
+        if not sanitized:
+            raise ValueError("user_id contains no valid characters.")
+        return sanitized
 
 
 class RefineResponse(BaseModel):
@@ -99,7 +121,7 @@ class FeedbackRequest(BaseModel):
 
     refinement_id: str = Field(
         ...,
-        description="UUID returned by POST /refine.",
+        description="UUID returned by POST /refine or POST /translate-refine.",
     )
     user_id: str = Field(
         ...,
@@ -111,6 +133,14 @@ class FeedbackRequest(BaseModel):
         description="'good' = used as-is or improved it. 'bad' = not useful.",
     )
 
+    @field_validator("user_id")
+    @classmethod
+    def sanitize_user_id(cls, v: str) -> str:
+        sanitized = re.sub(r"[^a-zA-Z0-9_\-]", "_", v).strip("_")
+        if not sanitized:
+            raise ValueError("user_id contains no valid characters.")
+        return sanitized
+
 
 class FeedbackResponse(BaseModel):
     """Confirmation returned after recording feedback."""
@@ -121,6 +151,60 @@ class FeedbackResponse(BaseModel):
         default=False,
         description="True if this 'good' refinement was promoted into the knowledge base.",
     )
+
+
+# ──────────────────────────────────────────────────────────────
+# Arabic Translate + Refine
+# ──────────────────────────────────────────────────────────────
+
+class TranslateRefineRequest(BaseModel):
+    """Payload for translating an Arabic prompt and refining it into professional English."""
+
+    user_id: str = Field(
+        ...,
+        min_length=1,
+        description="Must match a previously onboarded user_id.",
+    )
+    arabic_prompt: str = Field(
+        ...,
+        min_length=5,
+        description="The raw Arabic prompt to translate and refine.",
+    )
+
+    @field_validator("user_id")
+    @classmethod
+    def sanitize_user_id(cls, v: str) -> str:
+        sanitized = re.sub(r"[^a-zA-Z0-9_\-]", "_", v).strip("_")
+        if not sanitized:
+            raise ValueError("user_id contains no valid characters.")
+        return sanitized
+
+
+class TranslateRefineResponse(BaseModel):
+    """Structured result of the Arabic translate-and-refine pipeline."""
+
+    refinement_id: str = Field(
+        ...,
+        description="UUID for this refinement — can be rated via POST /feedback.",
+    )
+    original_arabic: str = Field(
+        ...,
+        description="The original Arabic prompt as submitted.",
+    )
+    translated_english: str = Field(
+        ...,
+        description="Literal English translation of the Arabic prompt.",
+    )
+    refined_prompt: str = Field(
+        ...,
+        description="The fully refined, professional English prompt.",
+    )
+    explanation: str = Field(
+        ...,
+        description="Why the refined prompt is better than the raw translation.",
+    )
+    technique_used: str
+    domain_tip_used: str
 
 
 # ──────────────────────────────────────────────────────────────
@@ -137,6 +221,10 @@ class HistoryEntry(BaseModel):
     domain_tip_used: str
     rating: Optional[Literal["good", "bad"]] = None
     timestamp: str
+    source: Optional[str] = Field(
+        default="refine",
+        description="Which pipeline produced this entry: 'refine' or 'translate-refine'.",
+    )
 
 
 class HistoryResponse(BaseModel):

@@ -87,6 +87,17 @@ def _ingest_prompt_techniques() -> None:
     with open(filepath, "r", encoding="utf-8") as f:
         techniques = json.load(f)
 
+    # FIX: Read existing success_rates from ChromaDB before upserting.
+    # Without this, every server restart would reset learned weights to 0.5,
+    # wiping out feedback-derived improvements.
+    existing_ids = [tech["id"] for tech in techniques]
+    existing_data = collection.get(ids=existing_ids, include=["metadatas"])
+    existing_rates: dict[str, float] = {}
+    if existing_data["metadatas"]:
+        for meta in existing_data["metadatas"]:
+            if meta and "title" in meta:
+                existing_rates[meta["title"]] = meta.get("success_rate", 0.5)
+
     # Build a rich text document for each technique to embed
     ids, documents, metadatas = [], [], []
     for tech in techniques:
@@ -101,13 +112,14 @@ def _ingest_prompt_techniques() -> None:
             "when_to_use": tech["when_to_use"],
             "example_before": tech["example_before"],
             "example_after": tech["example_after"],
-            # Default neutral success rate — overwritten by update_chroma_success_rates()
-            # once real feedback data exists.
-            "success_rate": 0.5,
+            # Preserve learned success_rate; default 0.5 only for genuinely new techniques
+            "success_rate": existing_rates.get(tech["title"], 0.5),
         })
 
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
     print(f"  [i] Ingested {len(ids)} prompt techniques.")
+
+
 
 
 def _ingest_domain_knowledge() -> None:

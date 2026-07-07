@@ -17,7 +17,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -26,10 +26,11 @@ from app.models import (
     RefineRequest, RefineResponse,
     FeedbackRequest, FeedbackResponse,
     HistoryResponse,
+    TranslateRefineRequest, TranslateRefineResponse,
 )
 from app.rag import ingest_knowledge_base, store_user_profile, load_user_profile
 from app.rag import retrieve_technique, retrieve_domain_tip
-from app.llm import refine_prompt
+from app.llm import refine_prompt, translate_prompt_to_english, translate_and_refine
 from app.feedback import (
     log_refinement, record_feedback, get_user_history,
     update_chroma_success_rates, maybe_promote_to_kb,
@@ -104,6 +105,17 @@ async def onboard_user(request: OnboardRequest):
     return OnboardResponse(user_id=request.user_id, status="onboarded")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def get_favicon():
+    """Favicon route to avoid 404 logs in browsers."""
+    favicon_path = _FRONTEND_DIR / "favicon.ico"
+    if favicon_path.exists():
+        return FileResponse(str(favicon_path))
+    # Return 204 No Content if no file exists to keep logs clean
+    from fastapi.responses import Response
+    return Response(status_code=204)
+
+
 @app.post("/refine", response_model=RefineResponse, summary="Refine a raw prompt")
 async def refine_user_prompt(request: RefineRequest):
     """
@@ -111,8 +123,8 @@ async def refine_user_prompt(request: RefineRequest):
 
     Pipeline:
       1. Load the user's profile (404 if not onboarded)
-      2. Embed and store the raw prompt in the user's prompt history
-      3. Retrieve similar past prompts from this user for personalization
+      2. Retrieve similar past prompts from this user for personalization
+      3. Embed and store the raw prompt in the user's prompt history (after retrieving)
       4. Retrieve the best-matching prompt-engineering technique (feedback-aware)
       5. Retrieve the best-matching domain-specific tip
       6. Call the LLM to rewrite the prompt with all context
@@ -126,18 +138,18 @@ async def refine_user_prompt(request: RefineRequest):
             detail=f"User '{request.user_id}' not found. Please onboard first via POST /onboard.",
         )
 
-    # Step 2: Store this prompt in the user's history (for future personalization)
-    embed_user_prompt_history(
-        user_id=request.user_id,
-        raw_prompt=request.raw_prompt,
-        domain=profile["domain"],
-    )
-
-    # Step 3: Retrieve similar past prompts from this user
+    # Step 2: Retrieve similar past prompts from this user (retrieve BEFORE embedding to avoid self-match)
     similar_prompts = retrieve_similar_user_prompts(
         user_id=request.user_id,
         raw_prompt=request.raw_prompt,
         n=3,
+    )
+
+    # Step 3: Store this prompt in the user's history
+    embed_user_prompt_history(
+        user_id=request.user_id,
+        raw_prompt=request.raw_prompt,
+        domain=profile["domain"],
     )
 
     # Step 4: Retrieve best prompt-engineering technique (feedback-aware reranking)
@@ -164,13 +176,15 @@ async def refine_user_prompt(request: RefineRequest):
     technique_title = technique.get("title", "Unknown")
     domain_tip_title = domain_tip.get("title", "Unknown")
 
-    # Step 7: Log the refinement for feedback tracking
+    # Step 7: Log the refinement for feedback tracking (pass domain for KB promotion)
     refinement_id = log_refinement(
         user_id=request.user_id,
         raw_prompt=request.raw_prompt,
         refined_prompt=refined,
         technique_used=technique_title,
         domain_tip_used=domain_tip_title,
+        domain=profile["domain"],
+        source="refine",
     )
 
     return RefineResponse(
@@ -182,14 +196,100 @@ async def refine_user_prompt(request: RefineRequest):
     )
 
 
+@app.post("/translate-refine", response_model=TranslateRefineResponse, summary="Translate Arabic prompt and refine it in English")
+async def translate_and_refine_arabic_prompt(request: TranslateRefineRequest):
+    """
+    Two-step composition pipeline for Arabic prompts:
+      1. Translate the raw Arabic prompt into literal English.
+      2. Run standard RAG on the translated English text to retrieve technique & domain tips.
+      3. Retrieve similar past English prompts from the user.
+      4. Embed the translated English text into the user's prompt history.
+      5. Call the LLM to rewrite the translated English prompt into a polished professional prompt.
+      6. Log the refinement as source="translate-refine".
+    """
+    # Step 1: Load user profile
+    profile = load_user_profile(request.user_id)
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"User '{request.user_id}' not found. Please onboard first via POST /onboard.",
+        )
+
+    # Step 2: Translate Arabic → English
+    try:
+        translated_english = translate_prompt_to_english(request.arabic_prompt)
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"LLM translation failed: {str(e)}",
+        )
+
+    # Step 3: Retrieve similar past prompts (using the English translation for cross-match)
+    similar_prompts = retrieve_similar_user_prompts(
+        user_id=request.user_id,
+        raw_prompt=translated_english,
+        n=3,
+    )
+
+    # Step 4: Store the English translation in the user's prompt history
+    embed_user_prompt_history(
+        user_id=request.user_id,
+        raw_prompt=translated_english,
+        domain=profile["domain"],
+    )
+
+    # Step 5: Retrieve best prompt technique & domain tip (using the English translation!)
+    technique = retrieve_technique(translated_english, n_candidates=3)
+    domain_tip = retrieve_domain_tip(translated_english, profile["domain"])
+
+    # Step 6: Perform refinement referencing both original Arabic and translated English
+    try:
+        refined, explanation = translate_and_refine(
+            arabic_prompt=request.arabic_prompt,
+            translated_english=translated_english,
+            technique=technique,
+            domain_tip=domain_tip,
+            user_profile=profile,
+            similar_past_prompts=similar_prompts,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"LLM refinement failed: {str(e)}",
+        )
+
+    technique_title = technique.get("title", "Unknown")
+    domain_tip_title = domain_tip.get("title", "Unknown")
+
+    # Step 7: Log refinement
+    refinement_id = log_refinement(
+        user_id=request.user_id,
+        raw_prompt=translated_english,  # log English version as base
+        refined_prompt=refined,
+        technique_used=technique_title,
+        domain_tip_used=domain_tip_title,
+        domain=profile["domain"],
+        source="translate-refine",
+    )
+
+    return TranslateRefineResponse(
+        refinement_id=refinement_id,
+        original_arabic=request.arabic_prompt,
+        translated_english=translated_english,
+        refined_prompt=refined,
+        explanation=explanation,
+        technique_used=technique_title,
+        domain_tip_used=domain_tip_title,
+    )
+
+
 @app.post("/feedback", response_model=FeedbackResponse, summary="Rate a refinement result")
-async def submit_feedback(request: FeedbackRequest):
+async def submit_feedback(request: FeedbackRequest, background_tasks: BackgroundTasks):
     """
     Record a thumbs-up or thumbs-down rating for a past refinement.
 
     On "good" ratings:
-      - Success rates are recomputed and written back to ChromaDB metadata,
-        so future retrievals favor techniques that work well.
+      - Success rates are recomputed in the background and written back to ChromaDB metadata.
       - If the refinement meets quality thresholds, it is promoted into the
         knowledge base as a new validated example (self-expanding RAG).
 
@@ -208,8 +308,8 @@ async def submit_feedback(request: FeedbackRequest):
             detail=f"Refinement '{request.refinement_id}' not found for user '{request.user_id}'.",
         )
 
-    # Recompute success rates and write back to ChromaDB (lightweight operation)
-    update_chroma_success_rates()
+    # FIX: Recompute success rates in a background thread to prevent blocking the response
+    background_tasks.add_task(update_chroma_success_rates)
 
     # For "good" ratings: attempt to promote this pair into the KB
     promoted = False
