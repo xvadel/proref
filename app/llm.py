@@ -7,8 +7,9 @@ Provider is selected via the LLM_PROVIDER environment variable:
 
 The main entry point is `refine_prompt()`, which:
   1. Builds a system prompt instructing the LLM to rewrite the user's raw prompt
-  2. Sends it to the configured LLM provider
-  3. Parses the structured response into (refined_prompt, explanation)
+  2. Injects the user's similar past prompts for deeper personalization
+  3. Sends it to the configured LLM provider
+  4. Parses the structured response into (refined_prompt, explanation)
 """
 
 import os
@@ -26,10 +27,12 @@ You have been given:
 1. A PROMPT-ENGINEERING TECHNIQUE to apply
 2. A DOMAIN-SPECIFIC BEST PRACTICE relevant to the user's field
 3. The USER'S PROFILE (domain, interests, bio) for personalization
+4. Optionally, SIMILAR PAST PROMPTS from this user — showing their typical writing patterns
 
 RULES:
 - Rewrite the prompt using the technique and domain tip provided.
 - Personalize it based on the user's domain, interests, and bio where relevant.
+- If similar past prompts are provided, note any recurring weaknesses (e.g. missing audience, no constraints) and proactively fix them in the refined prompt.
 - The refined prompt should be significantly more specific, actionable, and effective than the original.
 - Do NOT just add generic filler — every addition should serve a clear purpose.
 
@@ -154,20 +157,16 @@ def parse_llm_response(text: str) -> tuple[str, str]:
     refined_prompt = ""
     explanation = ""
 
-    # Normalize line endings
     text = text.strip()
 
     if "REFINED PROMPT:" in text and "WHY:" in text:
-        # Split on the WHY: marker
         parts = text.split("WHY:", 1)
         refined_prompt = parts[0].replace("REFINED PROMPT:", "").strip()
         explanation = parts[1].strip()
     elif "REFINED PROMPT:" in text:
-        # WHY section missing — use everything after the marker
         refined_prompt = text.split("REFINED PROMPT:", 1)[1].strip()
         explanation = "The prompt was refined using best practices for clarity and specificity."
     else:
-        # LLM didn't follow format at all — use the entire response as the refined prompt
         refined_prompt = text
         explanation = "The prompt was refined using best practices for clarity and specificity."
 
@@ -183,27 +182,30 @@ def refine_prompt(
     technique: dict,
     domain_tip: dict,
     user_profile: dict,
+    similar_past_prompts: list[str] | None = None,
 ) -> tuple[str, str]:
     """
     Refine a raw prompt using RAG-retrieved context and an LLM.
 
     Args:
-        raw_prompt:   The user's original, rough prompt.
-        technique:    Retrieved prompt-engineering technique (from ChromaDB).
-        domain_tip:   Retrieved domain-specific best practice (from ChromaDB).
-        user_profile: The user's stored profile (domain, interests, bio).
+        raw_prompt:           The user's original, rough prompt.
+        technique:            Retrieved prompt-engineering technique (from ChromaDB).
+        domain_tip:           Retrieved domain-specific best practice (from ChromaDB).
+        user_profile:         The user's stored profile (domain, interests, bio).
+        similar_past_prompts: Optional list of the user's past similar prompts,
+                              used to identify recurring patterns and personalize further.
 
     Returns:
         Tuple of (refined_prompt, explanation).
     """
-    # Build the user message with all retrieved context
-    user_message = _build_user_message(raw_prompt, technique, domain_tip, user_profile)
+    user_message = _build_user_message(
+        raw_prompt, technique, domain_tip, user_profile,
+        similar_past_prompts or [],
+    )
 
-    # Call the configured LLM
     client = get_llm_client()
     response_text = client.chat(SYSTEM_PROMPT, user_message)
 
-    # Parse the structured response
     return parse_llm_response(response_text)
 
 
@@ -212,11 +214,22 @@ def _build_user_message(
     technique: dict,
     domain_tip: dict,
     user_profile: dict,
+    similar_past_prompts: list[str],
 ) -> str:
     """Assemble the user message with all RAG-retrieved context."""
 
     interests = ", ".join(user_profile.get("interests", []))
     bio = user_profile.get("bio", "Not provided")
+
+    # Build the past-prompts section only when history exists
+    history_section = ""
+    if similar_past_prompts:
+        formatted = "\n".join(f"  - {p}" for p in similar_past_prompts)
+        history_section = f"""
+## SIMILAR PAST PROMPTS FROM THIS USER:
+(Use these to identify recurring weaknesses or patterns to proactively address)
+{formatted}
+"""
 
     return f"""## RAW PROMPT TO REFINE:
 {raw_prompt}
@@ -236,5 +249,5 @@ Guidance: {domain_tip.get('guidance', 'N/A')}
 Domain: {user_profile.get('domain', 'N/A')}
 Interests: {interests or 'Not specified'}
 Bio: {bio}
-
+{history_section}
 Now rewrite the raw prompt following the technique and domain tip above, personalized to this user's profile. Use the exact output format specified in your instructions."""

@@ -2,8 +2,10 @@
 Pydantic request/response models for the Prompt Refiner API.
 
 Defines the data contracts for:
-  - POST /onboard  → OnboardRequest / OnboardResponse
-  - POST /refine   → RefineRequest  / RefineResponse
+  - POST /onboard      → OnboardRequest / OnboardResponse
+  - POST /refine       → RefineRequest  / RefineResponse
+  - POST /feedback     → FeedbackRequest / FeedbackResponse
+  - GET  /history/{id} → HistoryResponse
 """
 
 from typing import Literal, Optional
@@ -66,6 +68,10 @@ class RefineRequest(BaseModel):
 class RefineResponse(BaseModel):
     """Structured result of the prompt refinement pipeline."""
 
+    refinement_id: str = Field(
+        ...,
+        description="UUID for this refinement. Send it back with POST /feedback to rate the result.",
+    )
     refined_prompt: str = Field(
         ...,
         description="The rewritten, improved prompt.",
@@ -82,3 +88,60 @@ class RefineResponse(BaseModel):
         ...,
         description="Title of the domain-specific best practice applied.",
     )
+
+
+# ──────────────────────────────────────────────────────────────
+# Feedback
+# ──────────────────────────────────────────────────────────────
+
+class FeedbackRequest(BaseModel):
+    """Payload for rating a refinement result."""
+
+    refinement_id: str = Field(
+        ...,
+        description="UUID returned by POST /refine.",
+    )
+    user_id: str = Field(
+        ...,
+        min_length=1,
+        description="Must match the user who made the refinement.",
+    )
+    rating: Literal["good", "bad"] = Field(
+        ...,
+        description="'good' = used as-is or improved it. 'bad' = not useful.",
+    )
+
+
+class FeedbackResponse(BaseModel):
+    """Confirmation returned after recording feedback."""
+
+    refinement_id: str
+    rating: str
+    promoted_to_kb: bool = Field(
+        default=False,
+        description="True if this 'good' refinement was promoted into the knowledge base.",
+    )
+
+
+# ──────────────────────────────────────────────────────────────
+# History
+# ──────────────────────────────────────────────────────────────
+
+class HistoryEntry(BaseModel):
+    """A single past refinement in a user's history."""
+
+    refinement_id: str
+    raw_prompt: str
+    refined_prompt: str
+    technique_used: str
+    domain_tip_used: str
+    rating: Optional[Literal["good", "bad"]] = None
+    timestamp: str
+
+
+class HistoryResponse(BaseModel):
+    """A user's past refinement history."""
+
+    user_id: str
+    total: int
+    entries: list[HistoryEntry]

@@ -1,829 +1,887 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Personalized Prompt Refiner — Transform vague prompts into precise, domain-specific prompts using RAG and AI.">
-    <title>Prompt Refiner — AI-Powered Prompt Engineering</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ProRef AI - Workspace</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                "surface": "#101415",
+                "primary-container": "#00ced1",
+                "on-secondary-container": "#adb4ce",
+                "secondary-fixed-dim": "#bec6e0",
+                "secondary": "#bec6e0",
+                "on-error": "#690005",
+                "tertiary-fixed": "#d5e3fd",
+                "tertiary": "#c7d6ef",
+                "secondary-container": "#3f465c",
+                "terminal-bg": "#020617",
+                "surface-container": "#1d2022",
+                "on-surface-variant": "#bac9c9",
+                "on-background": "#e0e3e5",
+                "error-container": "#93000a",
+                "on-tertiary-fixed": "#0d1c2f",
+                "surface-dim": "#101415",
+                "inverse-primary": "#00696b",
+                "background": "#101415",
+                "tertiary-container": "#acbad2",
+                "secondary-fixed": "#dae2fd",
+                "surface-border": "#1E293B",
+                "on-primary-fixed-variant": "#004f51",
+                "outline": "#859493",
+                "on-tertiary-fixed-variant": "#3a485c",
+                "tertiary-fixed-dim": "#b9c7e0",
+                "surface-container-lowest": "#0b0f10",
+                "on-secondary": "#283044",
+                "on-primary": "#003738",
+                "surface-container-low": "#191c1e",
+                "on-secondary-fixed-variant": "#3f465c",
+                "on-primary-fixed": "#002020",
+                "surface-container-highest": "#323537",
+                "error": "#ffb4ab",
+                "on-surface": "#e0e3e5",
+                "on-secondary-fixed": "#131b2e",
+                "on-primary-container": "#005354",
+                "primary": "#00ced1",
+                "surface-tint": "#00ced1",
+                "primary-fixed": "#5af8fb",
+                "success-teal": "#00ced1",
+                "on-tertiary": "#233144",
+                "surface-container-high": "#272a2c",
+                "surface-bright": "#363a3b",
+                "outline-variant": "#3b4949",
+                "inverse-on-surface": "#2d3133",
+                "inverse-surface": "#e0e3e5",
+                "on-tertiary-container": "#3c4a5f",
+                "surface-variant": "#323537",
+                "on-error-container": "#ffdad6",
+                "primary-fixed-dim": "#00ced1",
+                "code-gray": "#94A3B8"
+              },
+              "borderRadius": {
+                "DEFAULT": "0px",
+                "lg": "0px",
+                "xl": "0px",
+                "full": "0px"
+              },
+              "spacing": {
+                "gutter": "24px",
+                "stack-lg": "32px",
+                "stack-md": "16px",
+                "stack-sm": "8px",
+                "margin-mobile": "16px",
+                "container-max": "1200px"
+              },
+              "fontFamily": {
+                "headline-lg": ["Hanken Grotesk"],
+                "headline-md": ["Hanken Grotesk"],
+                "body-base": ["Hanken Grotesk"],
+                "code-block": ["JetBrains Mono"],
+                "status-label": ["JetBrains Mono"]
+              },
+              "fontSize": {
+                "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                "body-base": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "code-block": ["14px", {"lineHeight": "22px", "fontWeight": "400"}],
+                "status-label": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
     <style>
-        /* ────────────────────────────────────────────────────────
-           Design System — CSS Custom Properties
-        ──────────────────────────────────────────────────────── */
-        :root {
-            /* Backgrounds */
-            --bg-primary: #07070e;
-            --bg-secondary: #0d0d1a;
-            --bg-card: rgba(15, 15, 30, 0.7);
-            --bg-card-hover: rgba(20, 20, 42, 0.8);
-            --bg-input: rgba(12, 12, 28, 0.9);
-
-            /* Accent gradients */
-            --accent-primary: #6c5ce7;
-            --accent-secondary: #00cec9;
-            --accent-tertiary: #fd79a8;
-            --gradient-primary: linear-gradient(135deg, #6c5ce7, #00cec9);
-            --gradient-secondary: linear-gradient(135deg, #fd79a8, #6c5ce7);
-            --gradient-glow: linear-gradient(135deg, rgba(108,92,231,0.15), rgba(0,206,201,0.15));
-
-            /* Text */
-            --text-primary: #e8e6f0;
-            --text-secondary: #9895a8;
-            --text-muted: #5f5c6e;
-
-            /* Borders */
-            --border-subtle: rgba(108, 92, 231, 0.15);
-            --border-focus: rgba(108, 92, 231, 0.5);
-
-            /* Spacing */
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
-            --radius-xl: 20px;
-
-            /* Transitions */
-            --transition-fast: 150ms ease;
-            --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
-
-        /* ────────────────────────────────────────────────────────
-           Reset & Base
-        ──────────────────────────────────────────────────────── */
-        *, *::before, *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* Subtle animated background gradient */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background:
-                radial-gradient(ellipse 80% 50% at 20% 20%, rgba(108,92,231,0.08), transparent),
-                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0,206,201,0.06), transparent),
-                radial-gradient(ellipse 50% 50% at 50% 50%, rgba(253,121,168,0.04), transparent);
-            pointer-events: none;
-            z-index: 0;
-            animation: bgShift 20s ease-in-out infinite alternate;
-        }
-
-        @keyframes bgShift {
-            0%   { opacity: 0.8; }
-            50%  { opacity: 1; }
-            100% { opacity: 0.8; }
-        }
-
-        /* ────────────────────────────────────────────────────────
-           Layout
-        ──────────────────────────────────────────────────────── */
-        .app-container {
-            position: relative;
-            z-index: 1;
-            max-width: 960px;
-            margin: 0 auto;
-            padding: 40px 24px 80px;
-        }
-
-        /* ────────────────────────────────────────────────────────
-           Header
-        ──────────────────────────────────────────────────────── */
-        .header {
-            text-align: center;
-            margin-bottom: 48px;
-        }
-
-        .header__badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            background: var(--gradient-glow);
-            border: 1px solid var(--border-subtle);
-            border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: var(--accent-secondary);
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            margin-bottom: 16px;
-        }
-
-        .header__badge::before {
-            content: '';
+        .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
-            height: 6px;
-            background: var(--accent-secondary);
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
         }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.8); }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #020617;
         }
-
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 12px;
-            letter-spacing: -0.02em;
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1E293B;
+            border-radius: 0px;
         }
-
-        .header p {
-            font-size: 1.05rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto;
-            line-height: 1.7;
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #00ced1;
         }
-
-        /* ────────────────────────────────────────────────────────
-           Cards (Glass)
-        ──────────────────────────────────────────────────────── */
-        .card {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-xl);
-            padding: 32px;
-            margin-bottom: 28px;
-            transition: border-color var(--transition-smooth), box-shadow var(--transition-smooth);
+        /* Override rounded corners globally for a flat look */
+        * {
+            border-radius: 0 !important;
         }
-
-        .card:hover {
-            border-color: rgba(108, 92, 231, 0.25);
-            box-shadow: 0 8px 32px rgba(108, 92, 231, 0.08);
+        @keyframes subtle-drift {
+            0% { transform: translateY(0px) translateX(0px); }
+            50% { transform: translateY(-5px) translateX(2px); }
+            100% { transform: translateY(0px) translateX(0px); }
         }
-
-        .card__title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.15rem;
-            font-weight: 600;
-            margin-bottom: 24px;
-            color: var(--text-primary);
-        }
-
-        .card__title-icon {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--gradient-primary);
-            border-radius: var(--radius-sm);
-            font-size: 1rem;
-        }
-
-        /* ────────────────────────────────────────────────────────
-           Form Elements
-        ──────────────────────────────────────────────────────── */
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .form-group--full {
-            grid-column: 1 / -1;
-        }
-
-        label {
-            font-size: 0.82rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            letter-spacing: 0.03em;
-            text-transform: uppercase;
-        }
-
-        input, select, textarea {
-            width: 100%;
-            padding: 12px 16px;
-            background: var(--bg-input);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-md);
-            color: var(--text-primary);
-            font-family: 'Inter', sans-serif;
-            font-size: 0.95rem;
-            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-            outline: none;
-        }
-
-        input::placeholder, textarea::placeholder {
-            color: var(--text-muted);
-        }
-
-        input:focus, select:focus, textarea:focus {
-            border-color: var(--border-focus);
-            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.12);
-        }
-
-        select {
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239895a8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 14px center;
-            padding-right: 36px;
-        }
-
-        select option {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        /* ────────────────────────────────────────────────────────
-           Buttons
-        ──────────────────────────────────────────────────────── */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 28px;
-            border: none;
-            border-radius: var(--radius-md);
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all var(--transition-smooth);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn--primary {
-            background: var(--gradient-primary);
-            color: #fff;
-            box-shadow: 0 4px 16px rgba(108, 92, 231, 0.3);
-        }
-
-        .btn--primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 24px rgba(108, 92, 231, 0.4);
-        }
-
-        .btn--primary:active {
-            transform: translateY(0);
-        }
-
-        .btn--secondary {
-            background: transparent;
-            color: var(--accent-secondary);
-            border: 1px solid rgba(0, 206, 201, 0.3);
-        }
-
-        .btn--secondary:hover {
-            background: rgba(0, 206, 201, 0.08);
-            border-color: rgba(0, 206, 201, 0.5);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .btn__spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-            display: none;
-        }
-
-        .btn--loading .btn__spinner { display: block; }
-        .btn--loading .btn__text { opacity: 0.7; }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .form-actions {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 24px;
-        }
-
-        /* ────────────────────────────────────────────────────────
-           Refine Section
-        ──────────────────────────────────────────────────────── */
-        .refine-input {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .refine-input textarea {
-            min-height: 100px;
-            font-size: 1rem;
-        }
-
-        .refine-actions {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .refine-actions .user-id-display {
-            font-size: 0.82rem;
-            color: var(--text-muted);
-        }
-
-        .refine-actions .user-id-display strong {
-            color: var(--accent-secondary);
-            font-weight: 500;
-        }
-
-        /* ────────────────────────────────────────────────────────
-           Results
-        ──────────────────────────────────────────────────────── */
-        .result {
-            display: none;
-            margin-top: 28px;
-            animation: fadeSlideIn 0.5s ease forwards;
-        }
-
-        .result.visible {
-            display: block;
-        }
-
-        @keyframes fadeSlideIn {
-            from { opacity: 0; transform: translateY(16px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .result__section {
-            margin-bottom: 24px;
-        }
-
-        .result__label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-bottom: 8px;
-        }
-
-        .result__refined-prompt {
-            position: relative;
-            background: rgba(108, 92, 231, 0.06);
-            border: 1px solid rgba(108, 92, 231, 0.2);
-            border-radius: var(--radius-md);
-            padding: 20px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-            line-height: 1.7;
-            color: var(--text-primary);
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .copy-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            padding: 6px 12px;
-            background: rgba(108, 92, 231, 0.15);
-            border: 1px solid rgba(108, 92, 231, 0.25);
-            border-radius: var(--radius-sm);
-            color: var(--accent-primary);
-            font-size: 0.75rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all var(--transition-fast);
-        }
-
-        .copy-btn:hover {
-            background: rgba(108, 92, 231, 0.25);
-        }
-
-        .result__explanation {
-            background: rgba(0, 206, 201, 0.06);
-            border: 1px solid rgba(0, 206, 201, 0.15);
-            border-radius: var(--radius-md);
-            padding: 16px 20px;
-            font-size: 0.92rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-        }
-
-        /* Tags */
-        .result__tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 100px;
-            font-size: 0.78rem;
-            font-weight: 500;
-        }
-
-        .tag--technique {
-            background: rgba(108, 92, 231, 0.12);
-            color: #a29bfe;
-            border: 1px solid rgba(108, 92, 231, 0.2);
-        }
-
-        .tag--domain {
-            background: rgba(0, 206, 201, 0.12);
-            color: #81ecec;
-            border: 1px solid rgba(0, 206, 201, 0.2);
-        }
-
-        .tag__icon {
-            font-size: 0.85rem;
-        }
-
-        /* ────────────────────────────────────────────────────────
-           Status Messages
-        ──────────────────────────────────────────────────────── */
-        .status {
-            padding: 12px 16px;
-            border-radius: var(--radius-md);
-            font-size: 0.85rem;
-            font-weight: 500;
-            margin-top: 16px;
-            display: none;
-            animation: fadeSlideIn 0.3s ease forwards;
-        }
-
-        .status.visible { display: block; }
-
-        .status--success {
-            background: rgba(0, 206, 201, 0.1);
-            border: 1px solid rgba(0, 206, 201, 0.2);
-            color: var(--accent-secondary);
-        }
-
-        .status--error {
-            background: rgba(253, 121, 168, 0.1);
-            border: 1px solid rgba(253, 121, 168, 0.2);
-            color: var(--accent-tertiary);
-        }
-
-        /* ────────────────────────────────────────────────────────
-           Section Divider
-        ──────────────────────────────────────────────────────── */
-        .divider {
-            height: 1px;
-            background: var(--gradient-primary);
-            opacity: 0.15;
-            margin: 12px 0;
-            border-radius: 1px;
-        }
-
-        /* ────────────────────────────────────────────────────────
-           Footer
-        ──────────────────────────────────────────────────────── */
-        .footer {
-            text-align: center;
-            padding: 24px 0 0;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .footer a {
-            color: var(--accent-primary);
-            text-decoration: none;
-        }
-
-        /* ────────────────────────────────────────────────────────
-           Responsive
-        ──────────────────────────────────────────────────────── */
-        @media (max-width: 640px) {
-            .app-container { padding: 24px 16px 60px; }
-            .header h1 { font-size: 1.8rem; }
-            .form-grid { grid-template-columns: 1fr; }
-            .card { padding: 24px 20px; }
+        .animate-drift {
+            animation: subtle-drift 10s ease-in-out infinite;
         }
     </style>
 </head>
-<body>
-    <div class="app-container">
-        <!-- ─── Header ─── -->
-        <header class="header">
-            <div class="header__badge">RAG-Powered</div>
-            <h1>Prompt Refiner</h1>
-            <p>Transform vague prompts into precise, domain-specific prompts — with a clear explanation of <em>why</em> the refined version is better.</p>
-        </header>
+<body class="bg-terminal-bg text-on-surface font-body-base antialiased overflow-hidden min-h-screen flex flex-col">
 
-        <!-- ─── Onboarding Card ─── -->
-        <section class="card" id="onboarding-card">
-            <div class="card__title">
-                <span class="card__title-icon">👤</span>
-                Profile Setup
+    <!-- ────────────────────────────────────────────────────────
+       ONBOARDING VIEW (Shown if activeUserId is null)
+    ──────────────────────────────────────────────────────── -->
+    <div id="onboardingView" class="relative z-10 flex-grow flex items-center justify-center p-gutter">
+        <!-- Atmospheric Background Overlay -->
+        <div class="fixed inset-0 pointer-events-none z-0">
+            <div class="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full animate-drift"></div>
+            <div class="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full animate-drift" style="animation-delay: -5s;"></div>
+        </div>
+
+        <div class="w-full max-w-[540px] flex flex-col gap-stack-lg z-10">
+            <!-- Logo Section -->
+            <div class="flex flex-col items-center gap-stack-sm text-center">
+                <img alt="ProRef AI Logo" class="w-20 h-20 mb-stack-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsTpjuirnUCMDUnZLrgN-aWZdXBu8TZz76B7W11xQnUzXWNes1oZRxFkcT24QLkNXyUyEy48vu841uw6Wy2omV0tfqBIkA_JuW-PT3tyJnjuPg4d6t_AK_-N5B4dK9LWT21tsBZgbzYRisyWqvf9G1MQkyjm4a34MbBNFFMDUJ8v_SYdmioa6gyoo57OU9u4L19BU0dgqOE8ZLpYnM1UM2R7WgEH6wXZV0Sm1a06ujNmpB_F3-y67jyfwb5xn5rLfa_wFYnO3CWiM"/>
+                <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Configure Your Environment</h1>
+                <p class="font-body-base text-body-base text-on-surface-variant max-w-[400px]">Set up your technical identity to help ProRef refine prompts tailored to your specific workflow and domain.</p>
             </div>
-            <form id="onboard-form" class="form-grid">
-                <div class="form-group">
-                    <label for="user-id">User ID</label>
-                    <input type="text" id="user-id" placeholder="e.g. alice_dev" required>
-                </div>
 
-                <div class="form-group">
-                    <label for="domain">Domain</label>
-                    <select id="domain" required>
-                        <option value="" disabled selected>Choose your domain</option>
-                        <option value="dev">Software Development</option>
-                        <option value="marketing">Marketing</option>
-                        <option value="data_analysis">Data Analysis</option>
-                    </select>
-                </div>
-
-                <div class="form-group form-group--full">
-                    <label for="interests">Interests <span style="text-transform:none;color:var(--text-muted)">(comma-separated)</span></label>
-                    <input type="text" id="interests" placeholder="e.g. python, rag, fastapi, machine learning">
-                </div>
-
-                <div class="form-group form-group--full">
-                    <label for="bio">Bio <span style="text-transform:none;color:var(--text-muted)">(optional)</span></label>
-                    <textarea id="bio" rows="3" placeholder="Tell us a bit about yourself and what you're working on..."></textarea>
-                </div>
-
-                <div class="form-group form-group--full form-actions">
-                    <button type="submit" class="btn btn--primary" id="onboard-btn">
-                        <span class="btn__spinner"></span>
-                        <span class="btn__text">Save Profile</span>
-                    </button>
-                </div>
-            </form>
-            <div class="status" id="onboard-status"></div>
-        </section>
-
-        <div class="divider"></div>
-
-        <!-- ─── Refine Card ─── -->
-        <section class="card" id="refine-card">
-            <div class="card__title">
-                <span class="card__title-icon">✨</span>
-                Refine Your Prompt
-            </div>
-            <div class="refine-input">
-                <div class="form-group">
-                    <label for="raw-prompt">Your Rough Prompt</label>
-                    <textarea id="raw-prompt" rows="4" placeholder="Type a vague or rough prompt here... e.g. 'write me something about marketing'" required></textarea>
-                </div>
-                <div class="refine-actions">
-                    <button class="btn btn--primary" id="refine-btn" disabled>
-                        <span class="btn__spinner"></span>
-                        <span class="btn__text">Refine Prompt</span>
-                    </button>
-                    <span class="user-id-display" id="active-user">No profile saved yet</span>
-                </div>
-            </div>
-            <div class="status" id="refine-status"></div>
-
-            <!-- Results -->
-            <div class="result" id="result">
-                <div class="divider" style="margin: 28px 0"></div>
-
-                <div class="result__section">
-                    <div class="result__label">Refined Prompt</div>
-                    <div class="result__refined-prompt" id="refined-prompt-text">
-                        <button class="copy-btn" id="copy-btn" title="Copy to clipboard">📋 Copy</button>
+            <!-- Onboarding Card -->
+            <div class="bg-surface-container-low border border-surface-border p-8 shadow-2xl relative">
+                <!-- Top Accent Line -->
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-primary"></div>
+                <form class="flex flex-col gap-6" id="onboardingForm" onsubmit="handleOnboarding(event)">
+                    <!-- User ID Field -->
+                    <div class="flex flex-col gap-2">
+                        <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">id_card</span>
+                            user_id
+                        </label>
+                        <input id="userIdInput" required class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary focus:ring-0 transition-all placeholder:text-code-gray" placeholder="e.g. dev_commander_01" type="text"/>
                     </div>
-                </div>
 
-                <div class="result__section">
-                    <div class="result__label">Why It's Better</div>
-                    <div class="result__explanation" id="explanation-text"></div>
-                </div>
-
-                <div class="result__section">
-                    <div class="result__label">Applied Techniques</div>
-                    <div class="result__tags">
-                        <span class="tag tag--technique">
-                            <span class="tag__icon">🧠</span>
-                            <span id="technique-tag">—</span>
-                        </span>
-                        <span class="tag tag--domain">
-                            <span class="tag__icon">🎯</span>
-                            <span id="domain-tag">—</span>
-                        </span>
+                    <!-- Domain Dropdown -->
+                    <div class="flex flex-col gap-2">
+                        <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">terminal</span>
+                            domain_specialization
+                        </label>
+                        <div class="relative">
+                            <select id="domainSelect" required class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-0 transition-all cursor-pointer">
+                                <option value="dev">Software Dev</option>
+                                <option value="marketing">Marketing</option>
+                                <option value="data_analysis">Data Analysis</option>
+                            </select>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </section>
 
-        <footer class="footer">
-            Prompt Refiner — RAG + LLM Portfolio Project · Built with FastAPI, ChromaDB &amp; Sentence Transformers
-        </footer>
+                    <!-- Interests/Technical Focus -->
+                    <div class="flex flex-col gap-2">
+                        <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">label</span>
+                            technical_focus (technical focus chips)
+                        </label>
+                        <div class="flex flex-wrap gap-2 pt-1" id="interestsContainer">
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this)" data-value="RAG" type="button">
+                                <span>RAG</span>
+                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
+                            </button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this)" data-value="LLMOPS" type="button">
+                                <span>LLMOPS</span>
+                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
+                            </button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this)" data-value="VECTOR_DB" type="button">
+                                <span>VECTOR_DB</span>
+                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
+                            </button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this)" data-value="FRONTEND_UI" type="button">
+                                <span>FRONTEND_UI</span>
+                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bio Textarea -->
+                    <div class="flex flex-col gap-2">
+                        <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">description</span>
+                            professional_bio
+                        </label>
+                        <textarea id="bioInput" class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary focus:ring-0 transition-all resize-none placeholder:text-code-gray custom-scrollbar" placeholder="Describe your prompt refinement goals..." rows="3"></textarea>
+                    </div>
+
+                    <!-- Submit Action -->
+                    <div class="mt-4">
+                        <button id="onboardSubmitBtn" class="w-full bg-primary-container text-terminal-bg font-headline-md text-headline-md font-bold py-4 flex items-center justify-center gap-3 transition-transform active:scale-[0.98] hover:opacity-90" type="submit">
+                            Initialize Refiner
+                            <span class="material-symbols-outlined">rocket_launch</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer Help Text -->
+            <p class="text-center font-status-label text-status-label text-on-surface-variant flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">verified_user</span>
+                Secure Technical Instance • Version 2.0.0
+            </p>
+        </div>
     </div>
 
-    <!-- ─── JavaScript ─── -->
+    <!-- Success Modal -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-terminal-bg/90 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300" id="successModal">
+        <div class="bg-surface border border-primary/50 p-10 max-w-md text-center flex flex-col items-center gap-6 shadow-[0_0_50px_rgba(0,206,209,0.1)]">
+            <div class="w-16 h-16 bg-primary/20 flex items-center justify-center text-primary">
+                <span class="material-symbols-outlined text-[40px]">check_circle</span>
+            </div>
+            <div class="flex flex-col gap-2">
+                <h2 class="font-headline-md text-headline-md text-primary">Environment Ready</h2>
+                <p class="font-body-base text-body-base text-on-surface-variant">Your technical profile has been synchronized. Redirecting to workspace...</p>
+            </div>
+            <div class="w-full h-1 bg-surface-container-high overflow-hidden">
+                <div class="h-full bg-primary w-0" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ────────────────────────────────────────────────────────
+       WORKSPACE VIEW (Hidden if activeUserId is null)
+    ──────────────────────────────────────────────────────── -->
+    <div id="workspaceView" class="hidden flex-grow flex flex-row">
+        <!-- Sidebar Navigation -->
+        <aside class="h-screen w-64 fixed left-0 top-0 border-r border-surface-border bg-surface flex flex-col py-6 z-50">
+            <div class="px-6 mb-8">
+                <div class="flex items-center gap-3">
+                    <img alt="ProRef AI Logo" class="w-8 h-8 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsTpjuirnUCMDUnZLrgN-aWZdXBu8TZz76B7W11xQnUzXWNes1oZRxFkcT24QLkNXyUyEy48vu841uw6Wy2omV0tfqBIkA_JuW-PT3tyJnjuPg4d6t_AK_-N5B4dK9LWT21tsBZgbzYRisyWqvf9G1MQkyjm4a34MbBNFFMDUJ8v_SYdmioa6gyoo57OU9u4L19BU0dgqOE8ZLpYnM1UM2R7WgEH6wXZV0Sm1a06ujNmpB_F3-y67jyfwb5xn5rLfa_wFYnO3CWiM"/>
+                    <div>
+                        <h1 class="font-headline-md text-headline-md font-bold text-primary leading-tight">ProRef AI</h1>
+                        <p class="text-xs text-on-surface-variant uppercase tracking-widest font-status-label">Technical Edition</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 space-y-1 overflow-y-auto px-2" id="sidebarNav">
+                <button onclick="switchTab('workspace')" id="tabBtn-workspace" class="w-full text-left bg-primary/10 text-primary border-r-4 border-primary px-4 py-3 flex items-center gap-3 transition-colors duration-200">
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">edit_square</span>
+                    <span class="font-body-base">Workspace</span>
+                </button>
+                <button onclick="switchTab('history')" id="tabBtn-history" class="w-full text-left text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high px-4 py-3 flex items-center gap-3 transition-colors duration-200">
+                    <span class="material-symbols-outlined">history</span>
+                    <span class="font-body-base">History</span>
+                </button>
+                <button onclick="switchTab('help')" id="tabBtn-help" class="w-full text-left text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high px-4 py-3 flex items-center gap-3 transition-colors duration-200">
+                    <span class="material-symbols-outlined">help</span>
+                    <span class="font-body-base">Help</span>
+                </button>
+            </nav>
+
+            <div class="px-4 mt-auto pt-6 border-t border-surface-border space-y-4">
+                <button onclick="resetWorkspace()" class="w-full bg-primary text-terminal-bg font-bold py-3 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                    <span class="material-symbols-outlined">add</span>
+                    New Refinement
+                </button>
+                <button onclick="handleLogout()" class="w-full text-left text-on-surface-variant hover:text-error px-4 py-3 flex items-center gap-3 transition-colors duration-200">
+                    <span class="material-symbols-outlined">logout</span>
+                    <span class="font-body-base">Log out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Top AppBar -->
+        <header class="h-16 fixed top-0 right-0 left-64 z-40 border-b border-surface-border bg-surface flex items-center justify-between px-8">
+            <div class="flex items-center gap-8">
+                <span class="font-headline-md text-headline-md font-black text-on-surface tracking-tighter">PROREF</span>
+                <nav class="hidden lg:flex items-center gap-6">
+                    <span class="text-on-surface-variant font-status-label text-status-label uppercase tracking-wider">Models</span>
+                    <span class="text-on-surface-variant font-status-label text-status-label uppercase tracking-wider">Datasets</span>
+                </nav>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="text-right hidden sm:block">
+                        <div class="text-sm font-bold" id="appbarUser">demo_user</div>
+                        <div class="text-xs text-on-surface-variant uppercase font-status-label" id="appbarDomain">dev</div>
+                    </div>
+                    <div class="w-8 h-8 bg-surface-container-highest border border-surface-border overflow-hidden">
+                        <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxFUCxguH4Q6f6QVkAtSAHM-mUtB8WAGDQuzbqubPBpfwEunAYO2aSWsm-LHRQNxsI_ORCMmShmFcG011m9Q5iBNkjnESoi7kuOcyNP0bgmtgZg2XpzGalDkbDRu3RbCREAdT4rEwPMu6WMThONvj5iRdLSs4PaEeLskTcEUi2usqlEYJSWNXHS9R0gWipsGX1HzWzz9tR7CwTFGhdG6BSel4kb4lVXkU2bL69dqMh_m-SdnM1XZ7d278LnTTfSmuY3TltaRWxeac"/>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Canvas -->
+        <main class="pl-64 pt-16 w-full h-screen flex flex-col overflow-y-auto custom-scrollbar">
+            
+            <!-- PANEL: WORKSPACE -->
+            <div id="panel-workspace" class="tab-panel-item flex-1 w-full max-w-[1200px] mx-auto p-gutter space-y-gutter">
+                <!-- Welcome Header -->
+                <section class="flex flex-col gap-2">
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface">Prompt Workspace</h2>
+                    <p class="text-on-surface-variant max-w-2xl">Refine raw language into precise technical instructions. Select your model parameters and define the output constraints below.</p>
+                </section>
+
+                <!-- Bento Grid Layout -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+                    <!-- Input Section (Left Column) -->
+                    <div class="lg:col-span-7 space-y-gutter">
+                        <div class="bg-surface-container-low border border-surface-border p-6 flex flex-col gap-4">
+                            <div class="flex items-center justify-between">
+                                <label class="font-status-label text-status-label uppercase tracking-widest text-primary flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">terminal</span>
+                                    Rough Prompt Input
+                                </label>
+                                <span class="text-xs text-code-gray font-code-block" id="charCount">0 characters</span>
+                            </div>
+                            <textarea id="rawPromptTextarea" class="w-full h-64 bg-terminal-bg border border-surface-border p-4 font-code-block text-on-surface placeholder:text-code-gray focus:border-primary focus:ring-0 transition-all resize-none" placeholder="Paste your unrefined prompt here..." oninput="updateCharCount()"></textarea>
+                            
+                            <div class="flex items-center justify-between pt-2">
+                                <div class="text-xs text-error font-code-block" id="refineErrorMsg"></div>
+                                <button class="bg-primary text-terminal-bg px-8 py-3 font-bold flex items-center gap-2 active:scale-95 transition-all" id="refineBtn" onclick="handleRefinement()">
+                                    <span class="material-symbols-outlined" id="refineBtnIcon">auto_fix_high</span>
+                                    <span id="refineBtnText">REFINE PROMPT</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Contextual Guidelines Card -->
+                        <div class="bg-surface-container border border-surface-border p-6 relative overflow-hidden">
+                            <div class="relative z-10 space-y-3">
+                                <h3 class="font-headline-md text-headline-md text-primary">Optimization Tips</h3>
+                                <ul class="space-y-2">
+                                    <li class="flex items-start gap-3 text-on-surface-variant">
+                                        <span class="material-symbols-outlined text-primary text-lg mt-1">check_circle</span>
+                                        <span>Use <strong class="text-on-surface">Delimiters</strong> like ### or """ to separate instructions from input text.</span>
+                                    </li>
+                                    <li class="flex items-start gap-3 text-on-surface-variant">
+                                        <span class="material-symbols-outlined text-primary text-lg mt-1">check_circle</span>
+                                        <span>Specify a clear <strong class="text-on-surface">Persona</strong> to set tone, style and perspective.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Section (Right Column) -->
+                    <div class="lg:col-span-5 space-y-gutter">
+                        <div class="bg-surface-container-low border border-surface-border p-6 h-full flex flex-col gap-6" id="resultsCard">
+                            <div class="flex items-center justify-between">
+                                <label class="font-status-label text-status-label uppercase tracking-widest text-primary flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">auto_awesome</span>
+                                    Refined Output
+                                </label>
+                                <button class="text-on-surface-variant hover:text-primary transition-colors" onclick="copyRefinedPrompt()">
+                                    <span class="material-symbols-outlined" id="copyBtnIcon">content_copy</span>
+                                </button>
+                            </div>
+
+                            <!-- Monospaced Code Block -->
+                            <div class="bg-terminal-bg border border-surface-border p-5 flex-1 relative group min-h-[200px]">
+                                <pre id="refinedOutputPre" class="font-code-block text-code-block text-primary leading-relaxed whitespace-pre-wrap select-all">// Your refined output will appear here after clicking Refine Prompt</pre>
+                            </div>
+
+                            <!-- Explanation Area -->
+                            <div class="space-y-3">
+                                <h4 class="font-status-label text-xs uppercase text-on-surface-variant tracking-wider">Logic Explanation</h4>
+                                <p id="explanationText" class="font-body-base text-on-surface-variant text-sm leading-relaxed">
+                                    Refine your prompt to generate logic context.
+                                </p>
+                            </div>
+
+                            <!-- Feedback Area -->
+                            <div class="pt-4 border-t border-surface-border flex items-center justify-between gap-4 hidden" id="feedbackArea">
+                                <span class="text-xs text-on-surface-variant uppercase tracking-wider font-status-label">Was this output useful?</span>
+                                <div class="flex gap-2 items-center">
+                                    <button onclick="submitFeedback('good')" id="feedbackGoodBtn" class="flex items-center gap-1.5 px-3 py-1.5 border border-surface-border bg-surface-container hover:border-success-teal/50 hover:text-success-teal transition-all">
+                                        <span class="material-symbols-outlined text-base">thumb_up</span>
+                                        <span class="text-xs font-status-label">Useful</span>
+                                    </button>
+                                    <button onclick="submitFeedback('bad')" id="feedbackBadBtn" class="flex items-center gap-1.5 px-3 py-1.5 border border-surface-border bg-surface-container hover:border-error/50 hover:text-error transition-all">
+                                        <span class="material-symbols-outlined text-base">thumb_down</span>
+                                        <span class="text-xs font-status-label">Unusable</span>
+                                    </button>
+                                    <span id="feedbackStatusText" class="text-xs text-primary font-status-label"></span>
+                                </div>
+                            </div>
+
+                            <!-- Techniques & Tags -->
+                            <div class="pt-4 border-t border-surface-border space-y-3">
+                                <h4 class="font-status-label text-xs uppercase text-on-surface-variant tracking-wider">Metatags</h4>
+                                <div class="flex flex-wrap gap-2" id="metatagsContainer">
+                                    <span class="bg-surface-container border border-surface-border text-on-surface-variant px-3 py-1 text-[10px] font-status-label uppercase tracking-tight">no refinement active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL: HISTORY -->
+            <div id="panel-history" class="tab-panel-item hidden flex-1 w-full max-w-[1200px] mx-auto p-gutter space-y-gutter">
+                <section class="flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-headline-lg text-headline-lg text-on-surface">Refinement History</h2>
+                        <span class="bg-primary/10 border border-primary/40 text-primary px-3 py-1 text-xs font-status-label uppercase" id="historyCounter">0 entries</span>
+                    </div>
+                    <p class="text-on-surface-variant max-w-2xl">Review, audit, and analyze past prompt optimizations recorded on this user instance.</p>
+                </section>
+
+                <div class="space-y-4" id="historyEntriesList">
+                    <!-- Loaded dynamically via loadHistory() -->
+                </div>
+            </div>
+
+            <!-- PANEL: HELP -->
+            <div id="panel-help" class="tab-panel-item hidden flex-1 w-full max-w-[1200px] mx-auto p-gutter space-y-gutter">
+                <section class="flex flex-col gap-2">
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface">Instance Help & Settings</h2>
+                    <p class="text-on-surface-variant">Technical details and system documentation for the ProRef AI refiner.</p>
+                </section>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+                    <div class="bg-surface-container border border-surface-border p-6 space-y-4">
+                        <h3 class="font-headline-md text-headline-md text-primary">System Operations</h3>
+                        <p class="text-sm text-on-surface-variant">This refiner utilizes Retrieval-Augmented Generation (RAG) to locate relevant prompt-engineering guidelines and domain specializations inside a local, persistent vector database (ChromaDB).</p>
+                        <p class="text-sm text-on-surface-variant">The feedback system reranks retrieved items based on historical success rates. When refinement results are rated as "Useful", they are stored as successful context references.</p>
+                    </div>
+
+                    <div class="bg-surface-container border border-surface-border p-6 space-y-4">
+                        <h3 class="font-headline-md text-headline-md text-primary">Current Parameters</h3>
+                        <div class="space-y-2 font-code-block text-xs">
+                            <div class="flex justify-between border-b border-surface-border pb-1">
+                                <span class="text-code-gray">active_user_id</span>
+                                <span class="text-primary" id="helpActiveUser">—</span>
+                            </div>
+                            <div class="flex justify-between border-b border-surface-border pb-1">
+                                <span class="text-code-gray">domain_specialization</span>
+                                <span class="text-primary" id="helpActiveDomain">—</span>
+                            </div>
+                            <div class="flex justify-between border-b border-surface-border pb-1">
+                                <span class="text-code-gray">local_embeddings</span>
+                                <span class="text-primary">all-MiniLM-L6-v2</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ────────────────────────────────────────────────────────
+       JAVASCRIPT DRIVER
+    ──────────────────────────────────────────────────────── -->
     <script>
-        // ──────────────────────────────────────────────────
-        // State
-        // ──────────────────────────────────────────────────
+        // ──────────────────────────────────────────────────────
+        // State Management
+        // ──────────────────────────────────────────────────────
         let activeUserId = null;
+        let activeDomain = null;
+        let currentRefinementId = null;
+        let activeTags = [];
 
-        // ──────────────────────────────────────────────────
-        // DOM References
-        // ──────────────────────────────────────────────────
-        const onboardForm   = document.getElementById('onboard-form');
-        const onboardBtn    = document.getElementById('onboard-btn');
-        const onboardStatus = document.getElementById('onboard-status');
-        const refineBtn     = document.getElementById('refine-btn');
-        const refineStatus  = document.getElementById('refine-status');
-        const resultDiv     = document.getElementById('result');
-        const activeUserEl  = document.getElementById('active-user');
-        const copyBtn       = document.getElementById('copy-btn');
+        // Load persisted state if exists
+        window.addEventListener('load', () => {
+            const savedUser = localStorage.getItem('proref_user_id');
+            const savedDomain = localStorage.getItem('proref_domain');
+            if (savedUser && savedDomain) {
+                activeUserId = savedUser;
+                activeDomain = savedDomain;
+                initializeWorkspaceState();
+            }
+        });
 
-        // ──────────────────────────────────────────────────
-        // Helpers
-        // ──────────────────────────────────────────────────
+        // Toggle Technical Focus tags in onboarding
+        function toggleTag(btn) {
+            const tagVal = btn.getAttribute('data-value');
+            const icon = btn.querySelector('.tag-icon');
+            const isSelected = activeTags.includes(tagVal);
 
-        /**
-         * Show a status message below a form section.
-         * @param {HTMLElement} el  - The status element
-         * @param {string} message  - Text to display
-         * @param {string} type     - "success" or "error"
-         */
-        function showStatus(el, message, type) {
-            el.textContent = message;
-            el.className = `status visible status--${type}`;
-            // Auto-hide success messages after 5 seconds
-            if (type === 'success') {
-                setTimeout(() => { el.classList.remove('visible'); }, 5000);
+            if (isSelected) {
+                activeTags = activeTags.filter(t => t !== tagVal);
+                btn.classList.remove('border-primary/30', 'bg-primary/10', 'text-primary');
+                btn.classList.add('border-surface-border', 'bg-surface-container-high', 'text-on-surface-variant');
+                icon.innerText = 'add';
+            } else {
+                activeTags.push(tagVal);
+                btn.classList.remove('border-surface-border', 'bg-surface-container-high', 'text-on-surface-variant');
+                btn.classList.add('border-primary/30', 'bg-primary/10', 'text-primary');
+                icon.innerText = 'close';
             }
         }
 
-        /**
-         * Toggle loading state on a button.
-         */
-        function setLoading(btn, loading) {
-            btn.disabled = loading;
-            btn.classList.toggle('btn--loading', loading);
-        }
-
-        // ──────────────────────────────────────────────────
-        // Onboarding
-        // ──────────────────────────────────────────────────
-        onboardForm.addEventListener('submit', async (e) => {
+        // Onboarding Form Handler
+        async function handleOnboarding(e) {
             e.preventDefault();
+            const userId = document.getElementById('userIdInput').value.trim();
+            const domain = document.getElementById('domainSelect').value;
+            const bio = document.getElementById('bioInput').value.trim();
+            const submitBtn = document.getElementById('onboardSubmitBtn');
 
-            const userId    = document.getElementById('user-id').value.trim();
-            const domain    = document.getElementById('domain').value;
-            const interests = document.getElementById('interests').value
-                                .split(',')
-                                .map(s => s.trim())
-                                .filter(Boolean);
-            const bio       = document.getElementById('bio').value.trim() || null;
+            if (!userId || !domain) return;
 
-            if (!userId || !domain) {
-                showStatus(onboardStatus, 'Please fill in User ID and Domain.', 'error');
-                return;
-            }
-
-            setLoading(onboardBtn, true);
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Connecting... <span class="material-symbols-outlined animate-spin">sync</span>';
 
             try {
                 const res = await fetch('/onboard', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, domain, interests, bio }),
+                    body: JSON.stringify({
+                        user_id: userId,
+                        domain: domain,
+                        interests: activeTags,
+                        bio: bio || null
+                    })
                 });
 
                 if (!res.ok) {
                     const err = await res.json();
-                    throw new Error(err.detail || `HTTP ${res.status}`);
+                    throw new Error(err.detail || 'Connection failed.');
                 }
 
-                const data = await res.json();
-                activeUserId = data.user_id;
+                // Cache active session
+                activeUserId = userId;
+                activeDomain = domain;
+                localStorage.setItem('proref_user_id', userId);
+                localStorage.setItem('proref_domain', domain);
 
-                // Enable the refine button and show the active user
-                refineBtn.disabled = false;
-                activeUserEl.innerHTML = `Profile active: <strong>${activeUserId}</strong>`;
+                // Show Environment Modal Animation
+                const modal = document.getElementById('successModal');
+                const bar = document.getElementById('progressBar');
+                modal.classList.remove('opacity-0', 'pointer-events-none');
 
-                showStatus(onboardStatus, `✅ Profile saved for "${activeUserId}".`, 'success');
+                let progress = 0;
+                const interval = setInterval(() => {
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            modal.classList.add('opacity-0', 'pointer-events-none');
+                            initializeWorkspaceState();
+                        }, 400);
+                    } else {
+                        progress += 5;
+                        bar.style.width = progress + '%';
+                    }
+                }, 20);
+
             } catch (err) {
-                showStatus(onboardStatus, `❌ ${err.message}`, 'error');
-            } finally {
-                setLoading(onboardBtn, false);
+                alert(`Error initializing instance: ${err.message}`);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Initialize Refiner <span class="material-symbols-outlined">rocket_launch</span>';
             }
-        });
+        }
 
-        // ──────────────────────────────────────────────────
-        // Prompt Refinement
-        // ──────────────────────────────────────────────────
-        refineBtn.addEventListener('click', async () => {
-            const rawPrompt = document.getElementById('raw-prompt').value.trim();
+        // Apply state transitions to Workspace
+        function initializeWorkspaceState() {
+            document.getElementById('onboardingView').classList.add('hidden');
+            document.getElementById('workspaceView').classList.remove('hidden');
+
+            document.getElementById('appbarUser').innerText = activeUserId;
+            document.getElementById('appbarDomain').innerText = activeDomain === 'dev' ? 'Software Dev' : activeDomain === 'data_analysis' ? 'Data Analysis' : 'Marketing';
+
+            document.getElementById('helpActiveUser').innerText = activeUserId;
+            document.getElementById('helpActiveDomain').innerText = activeDomain;
+
+            document.getElementById('refineBtn').disabled = false;
+            switchTab('workspace');
+        }
+
+        // Navigation tab controller
+        function switchTab(tabId) {
+            // Update panels
+            document.querySelectorAll('.tab-panel-item').forEach(panel => {
+                panel.classList.add('hidden');
+            });
+            document.getElementById(`panel-${tabId}`).classList.remove('hidden');
+
+            // Update sidebar buttons styling
+            document.querySelectorAll('#sidebarNav button').forEach(btn => {
+                btn.classList.remove('bg-primary/10', 'text-primary', 'border-r-4', 'border-primary');
+                btn.classList.add('text-on-surface-variant', 'hover:text-on-surface', 'hover:bg-surface-container-high');
+                const span = btn.querySelector('.material-symbols-outlined');
+                if (span) span.style.fontVariationSettings = "'FILL' 0";
+            });
+
+            const activeBtn = document.getElementById(`tabBtn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-on-surface-variant', 'hover:text-on-surface', 'hover:bg-surface-container-high');
+                activeBtn.classList.add('bg-primary/10', 'text-primary', 'border-r-4', 'border-primary');
+                const span = activeBtn.querySelector('.material-symbols-outlined');
+                if (span) span.style.fontVariationSettings = "'FILL' 1";
+            }
+
+            if (tabId === 'history') {
+                loadHistory();
+            }
+        }
+
+        // Live input feedback
+        function updateCharCount() {
+            const txt = document.getElementById('rawPromptTextarea').value;
+            document.getElementById('charCount').innerText = `${txt.length} characters`;
+        }
+
+        // Call RAG + Refine Endpoint
+        async function handleRefinement() {
+            const rawPrompt = document.getElementById('rawPromptTextarea').value.trim();
+            const btn = document.getElementById('refineBtn');
+            const icon = document.getElementById('refineBtnIcon');
+            const text = document.getElementById('refineBtnText');
+            const resultsCard = document.getElementById('resultsCard');
+            const errorMsg = document.getElementById('refineErrorMsg');
 
             if (!rawPrompt) {
-                showStatus(refineStatus, 'Please enter a prompt to refine.', 'error');
+                errorMsg.innerText = "Please write a prompt to refine.";
                 return;
             }
+            errorMsg.innerText = "";
 
-            if (!activeUserId) {
-                showStatus(refineStatus, 'Please save your profile first.', 'error');
-                return;
-            }
-
-            setLoading(refineBtn, true);
-            resultDiv.classList.remove('visible');
+            // Toggle Loading State
+            btn.disabled = true;
+            icon.innerText = 'sync';
+            icon.classList.add('animate-spin');
+            text.innerText = 'REFINING...';
+            btn.classList.add('opacity-70');
 
             try {
                 const res = await fetch('/refine', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: activeUserId, raw_prompt: rawPrompt }),
+                    body: JSON.stringify({
+                        user_id: activeUserId,
+                        raw_prompt: rawPrompt
+                    })
                 });
 
                 if (!res.ok) {
                     const err = await res.json();
-                    throw new Error(err.detail || `HTTP ${res.status}`);
+                    throw new Error(err.detail || 'Refinement pipeline failed.');
                 }
 
                 const data = await res.json();
+                currentRefinementId = data.refinement_id;
 
-                // Populate the result card
-                document.getElementById('refined-prompt-text').childNodes[0].textContent = data.refined_prompt;
-                document.getElementById('explanation-text').textContent = data.explanation;
-                document.getElementById('technique-tag').textContent = data.technique_used;
-                document.getElementById('domain-tag').textContent = data.domain_tip_used;
+                // Set content
+                document.getElementById('refinedOutputPre').innerText = data.refined_prompt;
+                document.getElementById('explanationText').innerText = data.explanation;
 
-                // Show result with animation
-                resultDiv.classList.add('visible');
-                refineStatus.classList.remove('visible');
+                // Render Metatags
+                const tagsContainer = document.getElementById('metatagsContainer');
+                tagsContainer.innerHTML = '';
+
+                const techniqueTag = document.createElement('span');
+                techniqueTag.className = 'bg-primary/10 border border-primary/40 text-primary px-3 py-1 text-[10px] font-status-label uppercase tracking-tight';
+                techniqueTag.innerText = data.technique_used;
+
+                const domainTag = document.createElement('span');
+                domainTag.className = 'bg-primary/10 border border-primary/40 text-primary px-3 py-1 text-[10px] font-status-label uppercase tracking-tight';
+                domainTag.innerText = `Domain: ${data.domain_tip_used}`;
+
+                tagsContainer.appendChild(techniqueTag);
+                tagsContainer.appendChild(domainTag);
+
+                // Show Feedback controls
+                document.getElementById('feedbackArea').classList.remove('hidden');
+                resetFeedbackButtons();
+
+                // Flash Border feedback
+                resultsCard.style.borderColor = '#00ced1';
+                setTimeout(() => resultsCard.style.borderColor = '#1E293B', 1000);
 
             } catch (err) {
-                showStatus(refineStatus, `❌ ${err.message}`, 'error');
+                errorMsg.innerText = err.message;
             } finally {
-                setLoading(refineBtn, false);
+                btn.disabled = false;
+                icon.innerText = 'auto_fix_high';
+                icon.classList.remove('animate-spin');
+                text.innerText = 'REFINE PROMPT';
+                btn.classList.remove('opacity-70');
             }
-        });
+        }
 
-        // ──────────────────────────────────────────────────
-        // Copy to Clipboard
-        // ──────────────────────────────────────────────────
-        copyBtn.addEventListener('click', async () => {
-            // Get just the prompt text (first child text node), not the button text
-            const promptEl = document.getElementById('refined-prompt-text');
-            const text = promptEl.childNodes[0].textContent.trim();
+        // Copy refined prompt to clipboard
+        async function copyRefinedPrompt() {
+            const out = document.getElementById('refinedOutputPre').innerText;
+            const icon = document.getElementById('copyBtnIcon');
+            if (!out || out.startsWith('//')) return;
 
             try {
-                await navigator.clipboard.writeText(text);
-                copyBtn.textContent = '✅ Copied!';
-                setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
-            } catch {
-                // Fallback for older browsers
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                copyBtn.textContent = '✅ Copied!';
-                setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+                await navigator.clipboard.writeText(out);
+                icon.innerText = 'check';
+                setTimeout(() => icon.innerText = 'content_copy', 2000);
+            } catch (e) {
+                // Fallback select selection
+                alert("Text copied to clipboard.");
             }
-        });
+        }
 
-        // Allow Ctrl+Enter to submit the refine prompt
-        document.getElementById('raw-prompt').addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
-                refineBtn.click();
+        // Reset workspace layout
+        function resetWorkspace() {
+            document.getElementById('rawPromptTextarea').value = '';
+            document.getElementById('refinedOutputPre').innerText = '// Your refined output will appear here after clicking Refine Prompt';
+            document.getElementById('explanationText').innerText = 'Refine your prompt to generate logic context.';
+            document.getElementById('metatagsContainer').innerHTML = '<span class="bg-surface-container border border-surface-border text-on-surface-variant px-3 py-1 text-[10px] font-status-label uppercase tracking-tight">no refinement active</span>';
+            document.getElementById('feedbackArea').classList.add('hidden');
+            document.getElementById('refineErrorMsg').innerText = '';
+            updateCharCount();
+        }
+
+        // Log out handler
+        function handleLogout() {
+            activeUserId = null;
+            activeDomain = null;
+            activeTags = [];
+            currentRefinementId = null;
+
+            localStorage.removeItem('proref_user_id');
+            localStorage.removeItem('proref_domain');
+
+            document.getElementById('userIdInput').value = '';
+            document.getElementById('bioInput').value = '';
+            document.querySelectorAll('.tag-btn').forEach(btn => {
+                btn.classList.remove('border-primary/30', 'bg-primary/10', 'text-primary');
+                btn.classList.add('border-surface-border', 'bg-surface-container-high', 'text-on-surface-variant');
+                btn.querySelector('.tag-icon').innerText = 'add';
+            });
+
+            document.getElementById('workspaceView').classList.add('hidden');
+            document.getElementById('onboardingView').classList.remove('hidden');
+
+            const submitBtn = document.getElementById('onboardSubmitBtn');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Initialize Refiner <span class="material-symbols-outlined">rocket_launch</span>';
+        }
+
+        // Submit Rating Feedback loop
+        async function submitFeedback(rating) {
+            if (!currentRefinementId || !activeUserId) return;
+
+            const goodBtn = document.getElementById('feedbackGoodBtn');
+            const badBtn = document.getElementById('feedbackBadBtn');
+            const statusEl = document.getElementById('feedbackStatusText');
+
+            goodBtn.disabled = true;
+            badBtn.disabled = true;
+            statusEl.innerText = 'Synchronizing...';
+
+            try {
+                const res = await fetch('/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        refinement_id: currentRefinementId,
+                        user_id: activeUserId,
+                        rating: rating
+                    })
+                });
+
+                if (!res.ok) throw new Error('Feedback transmission failed.');
+
+                const data = await res.json();
+                statusEl.innerText = data.promoted_to_kb ? 'RAG Promoted' : 'Rating log ready';
+
+                // styling updates
+                if (rating === 'good') {
+                    goodBtn.classList.add('border-success-teal', 'text-success-teal', 'bg-success-teal/10');
+                } else {
+                    badBtn.classList.add('border-error', 'text-error', 'bg-error/10');
+                }
+
+            } catch (err) {
+                statusEl.innerText = 'Error logging feedback';
+                goodBtn.disabled = false;
+                badBtn.disabled = false;
             }
-        });
+        }
+
+        function resetFeedbackButtons() {
+            const goodBtn = document.getElementById('feedbackGoodBtn');
+            const badBtn = document.getElementById('feedbackBadBtn');
+            const statusEl = document.getElementById('feedbackStatusText');
+
+            goodBtn.disabled = false;
+            badBtn.disabled = false;
+            statusEl.innerText = '';
+
+            goodBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 border border-surface-border bg-surface-container hover:border-success-teal/50 hover:text-success-teal transition-all';
+            badBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 border border-surface-border bg-surface-container hover:border-error/50 hover:text-error transition-all';
+        }
+
+        // Load History Entries list
+        async function loadHistory() {
+            const entriesList = document.getElementById('historyEntriesList');
+            const counter = document.getElementById('historyCounter');
+
+            if (!activeUserId) return;
+
+            entriesList.innerHTML = '<div class="text-center py-10 font-code-block text-sm text-code-gray">Reading local logs...</div>';
+
+            try {
+                const res = await fetch(`/history/${encodeURIComponent(activeUserId)}?limit=25`);
+                if (!res.ok) throw new Error('History retrieval failed.');
+
+                const data = await res.json();
+                counter.innerText = `${data.total} entries`;
+
+                if (data.entries.length === 0) {
+                    entriesList.innerHTML = `
+                        <div class="text-center py-12 border border-dashed border-surface-border bg-surface-container-low">
+                            <span class="material-symbols-outlined text-4xl text-code-gray mb-3">inbox</span>
+                            <p class="text-sm font-code-block text-code-gray">Workspace has no refinement entries recorded.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                entriesList.innerHTML = data.entries.map(entry => {
+                    const ratingColor = entry.rating === 'good' ? 'text-success-teal' : entry.rating === 'bad' ? 'text-error' : 'text-code-gray';
+                    const ratingText = entry.rating === 'good' ? 'Useful' : entry.rating === 'bad' ? 'Unusable' : 'Not Rated';
+
+                    const cleanDate = new Date(entry.timestamp).toLocaleString(undefined, {
+                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+
+                    return `
+                        <div class="bg-surface-container-low border border-surface-border p-6 flex flex-col gap-4">
+                            <div class="flex items-center justify-between border-b border-surface-border pb-3 flex-wrap gap-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-status-label ${ratingColor} uppercase border border-current px-2 py-0.5">${ratingText}</span>
+                                    <span class="text-xs font-status-label text-primary uppercase bg-primary/10 border border-primary/20 px-2.5 py-0.5">${entry.technique_used}</span>
+                                </div>
+                                <span class="text-xs font-code-block text-code-gray">${cleanDate}</span>
+                            </div>
+                            <div class="text-sm text-on-surface-variant">
+                                <span class="text-xs text-primary font-status-label block uppercase mb-1">Original Prompt</span>
+                                <p class="font-body-base leading-relaxed text-on-background bg-terminal-bg/30 p-3 border border-surface-border/50">${escapeHtml(entry.raw_prompt)}</p>
+                            </div>
+                            <div class="text-sm">
+                                <span class="text-xs text-primary font-status-label block uppercase mb-1">Refined Output</span>
+                                <pre class="font-code-block text-xs bg-terminal-bg p-4 border border-surface-border text-primary whitespace-pre-wrap leading-relaxed">${escapeHtml(entry.refined_prompt)}</pre>
+                            </div>
+                            <div class="flex items-center gap-3 pt-1">
+                                <span class="text-xs font-status-label text-code-gray">Domain context applied:</span>
+                                <span class="text-xs font-status-label text-on-surface-variant border border-surface-border px-2 py-0.5">${entry.domain_tip_used}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                entriesList.innerHTML = `<div class="text-center py-10 font-code-block text-sm text-error">Failed to load history entries: ${err.message}</div>`;
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
     </script>
 </body>
 </html>
