@@ -2,7 +2,7 @@
   <img src="frontend/logo.png" alt="ProRef AI Logo" width="120" />
 </p>
 
-<h1 align="center">🔮 ProRef AI — Personalized Prompt Refiner</h1>
+<h1 align="center">PROREF AI — Personalized Prompt Refiner</h1>
 
 <p align="center">
   <strong>Transform vague prompts into precise, domain-specific, personalized prompts — with a learning loop that gets smarter with every rating.</strong>
@@ -18,7 +18,7 @@
 
 ---
 
-## ✨ What It Does
+## What It Does
 
 1. **You create a profile** — your working domain (`dev` / `marketing` / `data_analysis`), interests, and an optional bio
 2. **You submit a rough prompt** — e.g. *"write me something about marketing"*
@@ -31,7 +31,7 @@ The transparent explanation and the learning loop are the key differentiators �
 
 ---
 
-## 🆕 What's New in v2.0
+## What's New in v2.0
 
 | Feature | Description |
 |---|---|
@@ -48,58 +48,25 @@ The transparent explanation and the learning loop are the key differentiators �
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                    Frontend (index.html)                          │
-│   Onboarding  │  Refine Tab  │  Arabic Tab  │  History Tab       │
-└──────┬────────┴──────┬───────┴──────┬───────┴──────────────────--┘
-       │ POST /onboard │ POST /refine │ POST /translate-refine
-       │               │              │ POST /feedback
-       │               │              │ GET  /history/{user_id}
-       ▼               ▼              ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                  FastAPI Backend (main.py)                        │
-│                                                                   │
-│  models.py ──── Pydantic I/O schemas (all endpoints)             │
-│  rag.py ─────── ChromaDB + SentenceTransformers + reranking      │
-│  llm.py ─────── Pluggable LLM (Groq / Ollama) + Arabic pipeline │
-│  feedback.py ── Feedback log, success rates, KB promotion        │
-│                                                                   │
-│  ┌─────────────────────────────┐  ┌────────────────────────────┐ │
-│  │  ChromaDB (local)            │  │  LLM Provider              │ │
-│  │  • prompt_techniques         │  │  Groq API (default, free)  │ │
-│  │    (+ success_rate metadata) │  │  Ollama (local fallback)   │ │
-│  │  • domain_knowledge          │  └────────────────────────────┘ │
-│  │    (+ promoted examples)     │                                  │
-│  │  • user_profiles             │  ┌────────────────────────────┐ │
-│  │  • user_prompt_history       │  │  Feedback Store            │ │
-│  └─────────────────────────────┘  │  feedback/{user_id}.jsonl  │ │
-│                                   │  data/promoted_examples     │ │
-│                                   └────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────────┘
-```
+![ProRef AI System Architecture](frontend/architecture_diagram.png)
+
+| Endpoint | Module | Description |
+|---|---|---|
+| `POST /onboard` | `main.py` → `rag.py` | Stores user profile to disk + ChromaDB |
+| `POST /refine` | `main.py` → `rag.py` → `llm.py` → `feedback.py` | Full RAG + LLM refinement pipeline |
+| `POST /translate-refine` | `main.py` → `llm.py` → `rag.py` → `feedback.py` | Arabic translation + RAG refinement |
+| `POST /feedback` | `main.py` → `feedback.py` (background) | Rates a refinement, updates success rates, may promote to KB |
+| `GET /history/{user_id}` | `main.py` → `feedback.py` | Returns a user's past refinements with ratings |
 
 ### The Learning Loop
 
-```
-User rates "good"
-      │
-      ├─► update_chroma_success_rates()  [background thread]
-      │       Recomputes good/total ratio per technique
-      │       Writes back to prompt_techniques metadata
-      │       → retrieve_technique() reranks by success_rate next time
-      │
-      └─► maybe_promote_to_kb()
-              If raw ≥ 10 chars AND refined ≥ 30 chars AND not already promoted
-              → upserts (raw → refined) pair into domain_knowledge collection
-              → appended to data/promoted_examples.jsonl for auditability
-```
+![ProRef AI Learning Loop](frontend/learning_loop_diagram.png)
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology | Cost |
 |---|---|---|
@@ -114,7 +81,7 @@ User rates "good"
 
 ---
 
-## 🚀 Setup & Run
+## Setup & Run
 
 ### 1. Clone & Create Virtual Environment
 
@@ -167,7 +134,7 @@ Open **http://localhost:8000** in your browser. The knowledge base is automatica
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 ### `POST /onboard` — Create/Update User Profile
 
@@ -286,7 +253,7 @@ curl http://localhost:8000/history/alice?limit=10
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 proref/
@@ -323,29 +290,27 @@ proref/
 
 ---
 
-## 🔮 How RAG Works Here
+## How RAG Works Here
+
+![RAG Refinement Pipeline](frontend/rag_pipeline_diagram.png)
 
 ### On Startup
 - `prompt_techniques.json` and `data/domain_knowledge/*.json` are upserted into ChromaDB
-- Existing **success rates** from feedback logs are applied to technique metadata (so learned weights survive restarts)
+- Existing **success rates** from feedback logs are re-applied to technique metadata so learned weights **survive server restarts**
 
-### On Each `/refine` Request
-1. Load user profile (404 if not onboarded)
-2. Retrieve **similar past prompts** from `user_prompt_history` (before embedding, to avoid self-match)
-3. Embed and store the current prompt into `user_prompt_history`
-4. **Feedback-aware retrieval:** fetch top-3 technique candidates by cosine similarity, then rerank by `success_rate` — techniques that worked well historically win ties
-5. Retrieve the best domain-specific tip (filtered by the user's domain, including any promoted examples)
-6. Call the LLM with all context: technique + domain tip + user profile + past similar prompts
-7. Log the refinement and return a `refinement_id` for rating
+### Key Design Decisions
 
-### On Each `/feedback` POST
-- Rating is written to `feedback/{user_id}.jsonl`
-- Success rates are recomputed across all feedback logs and written back to ChromaDB metadata (in a background thread)
-- If `"good"` and quality thresholds are met: the (raw → refined) pair is promoted into `domain_knowledge` and logged to `data/promoted_examples.jsonl`
+| Decision | Why |
+|---|---|
+| Retrieve top-3, then rerank by `success_rate` | Pure similarity misses real-world effectiveness; success rates add a human signal |
+| Retrieve similar past prompts **before** embedding | Avoids the current prompt appearing in its own history results (self-match bug) |
+| Promote to `domain_knowledge` (not a separate collection) | Promoted examples are retrieved by the same `retrieve_domain_tip()` path — no extra code |
+| Background thread for success rate updates | Keeps the `/feedback` response instant; ChromaDB writes are non-blocking |
+| UUID-keyed idempotency for promotions | Re-running `/feedback` with `"good"` won't create duplicate KB entries |
 
 ---
 
-## 🌐 Arabic Support
+## Arabic Support
 
 `POST /translate-refine` enables a **two-LLM-call pipeline** for Arabic prompts:
 
@@ -359,6 +324,6 @@ The model used (Groq's `llama-3.1-8b-instant`) handles Arabic natively — no ex
 
 ---
 
-## 📄 License
+## License
 
 MIT — use it, learn from it, build on it.
