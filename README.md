@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/logo.png" alt="ProRef AI Logo" width="300" />
+  <img src="frontend/assets/logo.png" alt="ProRef AI Logo" width="300" />
 </p>
 
 <h1 align="center">PROREF AI â€” Personalized Prompt Refiner</h1>
@@ -50,7 +50,7 @@ The transparent explanation and the learning loop are the key differentiators â€
 
 ## Architecture
 
-![ProRef AI System Architecture](frontend/architecture_diagram.png)
+![ProRef AI System Architecture](frontend/assets/architecture_diagram.png)
 
 | Endpoint | Module | Description |
 |---|---|---|
@@ -62,7 +62,7 @@ The transparent explanation and the learning loop are the key differentiators â€
 
 ### The Learning Loop
 
-![ProRef AI Learning Loop](frontend/learning_loop_diagram.png)
+![ProRef AI Learning Loop](frontend/assets/learning_loop_diagram.png)
 
 ---
 
