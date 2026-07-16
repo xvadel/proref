@@ -1,0 +1,20 @@
+[
+  {
+    "id": "edu_learning_objectives",
+    "domain": "education",
+    "title": "Anchor Every Prompt in Learning Objectives",
+    "guidance": "Always state the target learning objective (TLO) before asking for educational content. Format it as: 'After this lesson, learners should be able to [verb] [concept] [to what standard].' Use Bloom's Taxonomy verbs deliberately — 'recall' for factual quizzes, 'analyze' for case studies, 'create' for project briefs. Without a TLO, LLMs default to information-dump responses rather than pedagogically structured ones. Specify the learner profile too: grade level, prior knowledge, and any accessibility needs. This produces content that is immediately usable in a curriculum without restructuring."
+  },
+  {
+    "id": "edu_scaffolding",
+    "domain": "education",
+    "title": "Scaffold Complexity Explicitly",
+    "guidance": "When generating educational explanations, specify the scaffolding structure: 'Introduce the concept with an analogy, then provide a formal definition, then give two concrete examples (one simple, one real-world), then ask one check-for-understanding question.' This mirrors evidence-based instructional design (Merrill's First Principles). Without explicit scaffolding instructions, LLMs tend to deliver flat, reference-manual-style explanations that work for experts but fail novice learners. Also specify the reading level (e.g., 'Grade 8 Flesch-Kincaid') or vocabulary constraints ('avoid jargon, define any technical term on first use')."
+  },
+  {
+    "id": "edu_assessment_design",
+    "domain": "education",
+    "title": "Specify Assessment Type and Cognitive Level",
+    "guidance": "When requesting assessments, rubrics, or quiz questions, explicitly state: (1) the question type (MCQ, short answer, scenario-based, project brief), (2) the Bloom's level being tested (recall, comprehension, application, analysis, synthesis, evaluation), (3) any distractor guidance for MCQs ('include one common misconception as a distractor'), and (4) the grading rubric format. Vague requests like 'make me a quiz on photosynthesis' produce surface-level recall questions. A prompt like 'Create 5 scenario-based questions testing application-level understanding of photosynthesis for Grade 10 students, each with a 3-point rubric' yields directly usable assessment materials."
+  }
+]

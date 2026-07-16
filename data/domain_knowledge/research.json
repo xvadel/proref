@@ -1,0 +1,20 @@
+[
+  {
+    "id": "research_literature_context",
+    "domain": "research",
+    "title": "Ground Requests in Field Context and Scope",
+    "guidance": "When prompting for research assistance, always specify: (1) the research field and sub-field (e.g., 'computational neuroscience, specifically working memory'), (2) the time window of relevant literature ('post-2018 only'), (3) the methodological tradition ('quantitative, RCT design'), and (4) the output's intended use ('systematic review intro section'). LLMs without this context will produce generic, surface-level academic prose that doesn't match the discourse conventions of your specific field. Also state what you already know — 'I am familiar with Baddeley's model, do not summarize it' — to prevent repetition of basics and push the model toward synthesis and critique."
+  },
+  {
+    "id": "research_hypothesis_framing",
+    "domain": "research",
+    "title": "Frame Hypotheses with Variables and Testability Constraints",
+    "guidance": "When asking for hypothesis generation, literature gap identification, or research question refinement, specify: the independent variable (IV), dependent variable (DV), population, and any confounders you want acknowledged. For example: 'Generate 3 testable hypotheses about the effect of [IV: sleep deprivation duration] on [DV: working memory performance] in [population: undergraduate students], acknowledging [confounder: baseline anxiety] as a potential moderator.' Unframed requests produce untestable, directionally vague statements. Adding 'each hypothesis must be falsifiable and suggest a measurement instrument' further constrains output toward publishable quality."
+  },
+  {
+    "id": "research_citation_precision",
+    "domain": "research",
+    "title": "Be Explicit About Citation Style and Hallucination Risk",
+    "guidance": "LLMs frequently hallucinate citations — they produce plausible-looking but non-existent references. Always add: 'Do NOT generate specific citations or DOIs — flag areas where a citation is needed with [CITE: topic] placeholders instead.' Then verify those flagged areas manually in Google Scholar or Semantic Scholar. For methodology sections, specify the citation style (APA 7th, Chicago 17th, Vancouver) and whether you need in-text or footnote style. If you want a literature synthesis, ask for a conceptual summary with named authors only when highly confident — 'mention seminal authors only if you are certain they published on this, otherwise use [CITE] placeholder.'"
+  }
+]

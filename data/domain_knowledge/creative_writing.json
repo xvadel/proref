@@ -1,0 +1,20 @@
+[
+  {
+    "id": "creative_voice_style",
+    "domain": "creative_writing",
+    "title": "Define Voice, Style, and Narrative POV Explicitly",
+    "guidance": "When requesting creative writing, specify: (1) narrative POV (first-person intimate, third-person limited, omniscient), (2) tense (past vs present — present creates urgency), (3) voice qualities (e.g., 'sardonic, understated, Hemingway-esque minimalism' or 'lyrical, dreamlike, magical realism'), and (4) a stylistic reference point ('in the style of Ursula K. Le Guin's prose rhythm, not her plots'). Without these, LLMs default to a generic, competent-but-flat narrative voice. Also specify what to avoid: 'no purple prose, no adverb-heavy dialogue tags, no on-the-nose emotional statements — show through action and detail.' Concrete negative constraints are often more powerful than positive ones for stylistic work."
+  },
+  {
+    "id": "creative_character_depth",
+    "domain": "creative_writing",
+    "title": "Anchor Characters in Contradiction and Specific Detail",
+    "guidance": "Shallow characters emerge from shallow prompts. When asking for character development, scene writing, or dialogue, provide contradictions: 'a character who is professionally ruthless but privately crippled by nostalgia.' Specific physical or behavioral details ground characters better than adjectives: 'she organizes her desk compulsively but her car is a wreck' is richer than 'she is contradictory.' For dialogue, specify subtext: 'they are talking about dinner plans but the subtext is that their relationship is ending — nothing should be stated directly.' Adding genre conventions helps too: 'literary fiction dialogue is sparse and elliptical; commercial fiction dialogue is more explicit about emotion.'"
+  },
+  {
+    "id": "creative_structure_arc",
+    "domain": "creative_writing",
+    "title": "Specify Story Structure and the Exact Scene Function",
+    "guidance": "Every scene should do at least two things: advance plot and reveal character, or raise stakes and introduce theme. When requesting scene or story structure help, state the scene's function explicitly: 'Write the inciting incident of a thriller — it must establish the protagonist's fatal flaw (overconfidence) while introducing the antagonist's threat, all within 500 words of present-tense, close-third-person narration.' For longer structure work, name the framework: three-act structure, Save the Cat beat sheet, Kishōtenketsu (four-act without conflict), or the hero's journey. LLMs perform significantly better with a named structural framework than with open-ended 'write me a story about X' prompts."
+  }
+]

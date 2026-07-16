@@ -7,6 +7,11 @@ Defines the data contracts for:
   - POST /feedback          → FeedbackRequest / FeedbackResponse
   - POST /translate-refine  → TranslateRefineRequest / TranslateRefineResponse
   - GET  /history/{id}      → HistoryResponse
+
+Profile fields (v2.1):
+  Core    — user_id, domain (6 options), interests, bio
+  New     — experience_level, preferred_language, tone_preference,
+            goal, tools, output_format_preference, avoid_topics
 """
 
 import re
@@ -19,17 +24,43 @@ from pydantic import BaseModel, Field, field_validator
 # ──────────────────────────────────────────────────────────────
 
 class OnboardRequest(BaseModel):
-    """Payload for creating or updating a user profile."""
+    """Payload for creating or updating a user profile.
+
+    Core fields:
+        user_id           — unique identifier
+        domain            — working domain (6 options)
+        interests         — list of interest/skill tags
+        bio               — optional free-text bio
+
+    Extended personalization fields (v2.1):
+        experience_level       — calibrates prompt complexity and vocabulary
+        preferred_language     — language the refined prompt should be written in
+        tone_preference        — style register of the refined output
+        goal                   — the user's overarching objective (free-text)
+        tools                  — specific tools/technologies the user works with
+        output_format_preference — preferred structure of the refined prompt's output
+        avoid_topics           — topics or patterns the user wants excluded
+    """
 
     user_id: str = Field(
         ...,
         min_length=1,
         description="Unique identifier for the user (e.g. 'alice', 'bob_42').",
     )
-    domain: Literal["dev", "marketing", "data_analysis"] = Field(
+    domain: Literal[
+        "dev",
+        "marketing",
+        "data_analysis",
+        "education",
+        "research",
+        "creative_writing",
+    ] = Field(
         ...,
-        description="The user's working domain. Determines which domain-specific "
-                    "best practices are retrieved during prompt refinement.",
+        description=(
+            "The user's working domain. Determines which domain-specific "
+            "best practices are retrieved during prompt refinement. "
+            "Supported: dev, marketing, data_analysis, education, research, creative_writing."
+        ),
     )
     interests: list[str] = Field(
         default_factory=list,
@@ -38,6 +69,68 @@ class OnboardRequest(BaseModel):
     bio: Optional[str] = Field(
         default=None,
         description="Optional free-text biography. Used to further personalize refined prompts.",
+    )
+
+    # ── Extended personalization fields (v2.1) ─────────────────────────────
+
+    experience_level: Literal["beginner", "intermediate", "expert"] = Field(
+        default="intermediate",
+        description=(
+            "The user's expertise level. Controls vocabulary complexity and assumed "
+            "prior knowledge in the refined prompt. "
+            "'beginner' → simple language, more explanation; "
+            "'expert' → technical terminology, concise."
+        ),
+    )
+    preferred_language: str = Field(
+        default="English",
+        description=(
+            "The language the refined prompt (and ideally the LLM response) should be "
+            "written in. E.g. 'English', 'Arabic', 'French', 'Spanish'."
+        ),
+    )
+    tone_preference: Literal["formal", "balanced", "casual"] = Field(
+        default="balanced",
+        description=(
+            "Preferred style register for the refined prompt. "
+            "'formal' → professional/academic; "
+            "'balanced' → clear and approachable (default); "
+            "'casual' → conversational and direct."
+        ),
+    )
+    goal: Optional[str] = Field(
+        default=None,
+        description=(
+            "The user's overarching objective or project context. Free-text. "
+            "E.g. 'Building a RAG-based chatbot for my final-year project'. "
+            "Helps the LLM tailor refinements toward a broader purpose."
+        ),
+    )
+    tools: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Specific tools, libraries, or technologies the user works with. "
+            "E.g. ['FastAPI', 'PostgreSQL', 'Docker']. "
+            "Injected into the LLM context so refinements reference relevant tooling."
+        ),
+    )
+    output_format_preference: Literal[
+        "paragraph", "bullets", "structured", "code"
+    ] = Field(
+        default="paragraph",
+        description=(
+            "Preferred structure for the output requested in the refined prompt. "
+            "'paragraph' → flowing prose; 'bullets' → concise bullet list; "
+            "'structured' → headings/sections; 'code' → code-first with minimal prose."
+        ),
+    )
+    avoid_topics: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Topics, patterns, or styles the user wants excluded from refinements. "
+            "E.g. ['jargon', 'passive voice', 'generic advice']. "
+            "Added as negative constraints to the LLM prompt."
+        ),
     )
 
     @field_validator("user_id")
@@ -57,6 +150,8 @@ class OnboardResponse(BaseModel):
     """Confirmation returned after successful onboarding."""
 
     user_id: str
+    domain: str
+    experience_level: str
     status: str = "onboarded"
 
 

@@ -102,7 +102,12 @@ async def onboard_user(request: OnboardRequest):
     """
     profile = request.model_dump()
     store_user_profile(profile)
-    return OnboardResponse(user_id=request.user_id, status="onboarded")
+    return OnboardResponse(
+        user_id=request.user_id,
+        domain=request.domain,
+        experience_level=request.experience_level,
+        status="onboarded",
+    )
 
 
 @app.get("/favicon.ico", include_in_schema=False)
