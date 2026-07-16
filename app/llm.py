@@ -26,15 +26,31 @@ SYSTEM_PROMPT = """You are an expert prompt engineer. Your job is to take a user
 You have been given:
 1. A PROMPT-ENGINEERING TECHNIQUE to apply
 2. A DOMAIN-SPECIFIC BEST PRACTICE relevant to the user's field
-3. The USER'S PROFILE (domain, interests, bio) for personalization
+3. The USER'S FULL PROFILE — including their domain, experience level, tone preference, goal, tools, and topics to avoid
 4. Optionally, SIMILAR PAST PROMPTS from this user — showing their typical writing patterns
 
 RULES:
 - Rewrite the prompt using the technique and domain tip provided.
-- Personalize it based on the user's domain, interests, and bio where relevant.
-- If similar past prompts are provided, note any recurring weaknesses (e.g. missing audience, no constraints) and proactively fix them in the refined prompt.
+- Calibrate vocabulary and depth to the user's EXPERIENCE LEVEL:
+    beginner  → use plain language, avoid jargon, briefly explain concepts
+    intermediate → assume working knowledge, moderate technical depth
+    expert    → use precise technical terminology, skip basics, be concise
+- Apply the user's TONE PREFERENCE:
+    formal   → professional, structured, no contractions
+    balanced → clear and approachable, natural professional voice
+    casual   → direct, conversational, first-person OK
+- Prefer the user's OUTPUT FORMAT PREFERENCE in the prompt you write:
+    paragraph → flowing prose instructions
+    bullets   → concise bullet points
+    structured → use headers/sections
+    code      → code-first output, minimal prose
+- If the user specified TOOLS, reference relevant ones naturally — do not force them.
+- If the user stated a GOAL, ensure the refined prompt serves that larger purpose.
+- If AVOID TOPICS are listed, treat them as hard negative constraints — do not mention them.
+- If similar past prompts are provided, note any recurring weaknesses (e.g. missing audience, no constraints) and proactively fix them.
 - The refined prompt should be significantly more specific, actionable, and effective than the original.
 - Do NOT just add generic filler — every addition should serve a clear purpose.
+- If PREFERRED LANGUAGE is not English, write the refined prompt in that language.
 
 OUTPUT FORMAT (you MUST follow this exactly):
 REFINED PROMPT: <your rewritten prompt here — just the prompt text, no quotes>
@@ -216,10 +232,23 @@ def _build_user_message(
     user_profile: dict,
     similar_past_prompts: list[str],
 ) -> str:
-    """Assemble the user message with all RAG-retrieved context."""
+    """Assemble the user message with all RAG-retrieved context.
+
+    Injects all v2.1 profile fields so the LLM can calibrate vocabulary,
+    tone, format, tooling references, and topic constraints.
+    """
 
     interests = ", ".join(user_profile.get("interests", []))
     bio = user_profile.get("bio", "Not provided")
+
+    # ── Extended profile fields (v2.1) ──────────────────────────────────────
+    experience_level = user_profile.get("experience_level", "intermediate")
+    tone_preference = user_profile.get("tone_preference", "balanced")
+    output_format = user_profile.get("output_format_preference", "paragraph")
+    preferred_language = user_profile.get("preferred_language", "English")
+    goal = user_profile.get("goal") or "Not specified"
+    tools = ", ".join(user_profile.get("tools", [])) or "Not specified"
+    avoid_topics = ", ".join(user_profile.get("avoid_topics", [])) or "None"
 
     # Build the past-prompts section only when history exists
     history_section = ""
@@ -247,10 +276,17 @@ Guidance: {domain_tip.get('guidance', 'N/A')}
 
 ## USER PROFILE:
 Domain: {user_profile.get('domain', 'N/A')}
+Experience level: {experience_level}  ← calibrate vocabulary and depth accordingly
+Tone preference: {tone_preference}  ← match this register in the refined prompt
+Output format preference: {output_format}  ← structure the prompt's expected output this way
+Preferred language: {preferred_language}  ← write the refined prompt in this language
 Interests: {interests or 'Not specified'}
 Bio: {bio}
+Goal / Project context: {goal}
+Tools & Technologies: {tools}
+Avoid topics / constraints: {avoid_topics}
 {history_section}
-Now rewrite the raw prompt following the technique and domain tip above, personalized to this user's profile. Use the exact output format specified in your instructions."""
+Now rewrite the raw prompt following the technique and domain tip above, fully personalized to this user's profile. Use the exact output format specified in your instructions."""
 
 
 # ──────────────────────────────────────────────────────────────
@@ -347,10 +383,23 @@ def _build_arabic_refine_message(
     user_profile: dict,
     similar_past_prompts: list[str],
 ) -> str:
-    """Assemble the Arabic-pipeline user message with translation + RAG context."""
+    """Assemble the Arabic-pipeline user message with translation + RAG context.
+
+    Mirrors _build_user_message() — includes all v2.1 extended profile fields
+    for consistent personalization across both pipelines.
+    """
 
     interests = ", ".join(user_profile.get("interests", []))
     bio = user_profile.get("bio", "Not provided")
+
+    # ── Extended profile fields (v2.1) ──────────────────────────────────────
+    experience_level = user_profile.get("experience_level", "intermediate")
+    tone_preference = user_profile.get("tone_preference", "balanced")
+    output_format = user_profile.get("output_format_preference", "paragraph")
+    preferred_language = user_profile.get("preferred_language", "English")
+    goal = user_profile.get("goal") or "Not specified"
+    tools = ", ".join(user_profile.get("tools", [])) or "Not specified"
+    avoid_topics = ", ".join(user_profile.get("avoid_topics", [])) or "None"
 
     history_section = ""
     if similar_past_prompts:
@@ -379,8 +428,17 @@ Guidance: {domain_tip.get('guidance', 'N/A')}
 
 ## USER PROFILE:
 Domain: {user_profile.get('domain', 'N/A')}
+Experience level: {experience_level}  ← calibrate vocabulary and depth accordingly
+Tone preference: {tone_preference}  ← match this register in the refined prompt
+Output format preference: {output_format}  ← structure the prompt's expected output this way
+Preferred language: {preferred_language}  ← write the refined prompt in this language
 Interests: {interests or 'Not specified'}
 Bio: {bio}
+Goal / Project context: {goal}
+Tools & Technologies: {tools}
+Avoid topics / constraints: {avoid_topics}
 {history_section}
 Rewrite the English translation into a polished, professional, domain-specific prompt. Use the exact output format specified in your instructions."""
+
+
 

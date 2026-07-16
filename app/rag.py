@@ -154,7 +154,10 @@ def store_user_profile(profile: dict) -> None:
     Persist a user profile to disk (JSON) and embed it in ChromaDB.
 
     Args:
-        profile: Dict with keys user_id, domain, interests, bio (optional).
+        profile: Dict with keys user_id, domain, interests, bio, and all
+                 extended v2.1 fields (experience_level, preferred_language,
+                 tone_preference, goal, tools, output_format_preference,
+                 avoid_topics).
     """
     # Ensure the profiles directory exists
     _PROFILES_DIR.mkdir(parents=True, exist_ok=True)
@@ -164,7 +167,7 @@ def store_user_profile(profile: dict) -> None:
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(profile, f, indent=2, ensure_ascii=False)
 
-    # Also embed in ChromaDB for potential future semantic retrieval
+    # Embed in ChromaDB for potential future semantic retrieval
     collection = _get_collection("user_profiles")
     doc_text = _profile_to_text(profile)
     collection.upsert(
@@ -173,6 +176,9 @@ def store_user_profile(profile: dict) -> None:
         metadatas=[{
             "user_id": profile["user_id"],
             "domain": profile["domain"],
+            # Store key enum fields for potential future filtering
+            "experience_level": profile.get("experience_level", "intermediate"),
+            "tone_preference": profile.get("tone_preference", "balanced"),
         }],
     )
 
@@ -192,13 +198,27 @@ def load_user_profile(user_id: str) -> dict | None:
 
 
 def _profile_to_text(profile: dict) -> str:
-    """Convert a profile dict to a searchable text document."""
+    """Convert a profile dict to a searchable text document.
+
+    Includes all v2.1 extended fields so the ChromaDB embedding captures
+    the full semantic richness of the user's context.
+    """
     parts = [
         f"Domain: {profile['domain']}",
+        f"Experience: {profile.get('experience_level', 'intermediate')}",
         f"Interests: {', '.join(profile.get('interests', []))}",
+        f"Tone: {profile.get('tone_preference', 'balanced')}",
+        f"Output format: {profile.get('output_format_preference', 'paragraph')}",
+        f"Preferred language: {profile.get('preferred_language', 'English')}",
     ]
     if profile.get("bio"):
         parts.append(f"Bio: {profile['bio']}")
+    if profile.get("goal"):
+        parts.append(f"Goal: {profile['goal']}")
+    if profile.get("tools"):
+        parts.append(f"Tools: {', '.join(profile['tools'])}")
+    if profile.get("avoid_topics"):
+        parts.append(f"Avoid: {', '.join(profile['avoid_topics'])}")
     return ". ".join(parts)
 
 

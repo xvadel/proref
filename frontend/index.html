@@ -179,7 +179,7 @@
             <div class="bg-surface-container-low border border-surface-border p-8 shadow-2xl relative">
                 <!-- Top Accent Line -->
                 <div class="absolute top-0 left-0 right-0 h-[2px] bg-primary"></div>
-                <form class="flex flex-col gap-6" id="onboardingForm" onsubmit="handleOnboarding(event)">
+                <form class="flex flex-col gap-5" id="onboardingForm" onsubmit="handleOnboarding(event)">
                     <!-- User ID Field -->
                     <div class="flex flex-col gap-2">
                         <label
@@ -192,23 +192,114 @@
                             placeholder="e.g. dev_commander_01" type="text" />
                     </div>
 
-                    <!-- Domain Dropdown -->
+                    <!-- Row: Domain + Experience Level -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Domain Dropdown -->
+                        <div class="flex flex-col gap-2">
+                            <label
+                                class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[14px]">terminal</span>
+                                domain
+                            </label>
+                            <div class="relative">
+                                <select id="domainSelect" required
+                                    class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-0 transition-all cursor-pointer">
+                                    <option value="dev">Software Dev</option>
+                                    <option value="marketing">Marketing</option>
+                                    <option value="data_analysis">Data Analysis</option>
+                                    <option value="education">Education</option>
+                                    <option value="research">Research</option>
+                                    <option value="creative_writing">Creative Writing</option>
+                                </select>
+                                <span
+                                    class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+                            </div>
+                        </div>
+
+                        <!-- Experience Level -->
+                        <div class="flex flex-col gap-2">
+                            <label
+                                class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[14px]">school</span>
+                                experience
+                            </label>
+                            <div class="relative">
+                                <select id="experienceLevelSelect"
+                                    class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-0 transition-all cursor-pointer">
+                                    <option value="beginner">Beginner</option>
+                                    <option value="intermediate" selected>Intermediate</option>
+                                    <option value="expert">Expert</option>
+                                </select>
+                                <span
+                                    class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row: Tone + Output Format -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Tone Preference -->
+                        <div class="flex flex-col gap-2">
+                            <label
+                                class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[14px]">record_voice_over</span>
+                                tone
+                            </label>
+                            <div class="relative">
+                                <select id="toneSelect"
+                                    class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-0 transition-all cursor-pointer">
+                                    <option value="formal">Formal</option>
+                                    <option value="balanced" selected>Balanced</option>
+                                    <option value="casual">Casual</option>
+                                </select>
+                                <span
+                                    class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+                            </div>
+                        </div>
+
+                        <!-- Output Format -->
+                        <div class="flex flex-col gap-2">
+                            <label
+                                class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[14px]">format_list_bulleted</span>
+                                output_format
+                            </label>
+                            <div class="relative">
+                                <select id="outputFormatSelect"
+                                    class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-0 transition-all cursor-pointer">
+                                    <option value="paragraph" selected>Paragraph</option>
+                                    <option value="bullets">Bullets</option>
+                                    <option value="structured">Structured</option>
+                                    <option value="code">Code-First</option>
+                                </select>
+                                <span
+                                    class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preferred Language -->
                     <div class="flex flex-col gap-2">
                         <label
                             class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[14px]">terminal</span>
-                            domain_specialization
+                            <span class="material-symbols-outlined text-[14px]">translate</span>
+                            preferred_language
                         </label>
-                        <div class="relative">
-                            <select id="domainSelect" required
-                                class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-0 transition-all cursor-pointer">
-                                <option value="dev">Software Dev</option>
-                                <option value="marketing">Marketing</option>
-                                <option value="data_analysis">Data Analysis</option>
-                            </select>
-                            <span
-                                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
-                        </div>
+                        <input id="preferredLanguageInput"
+                            class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary focus:ring-0 transition-all placeholder:text-code-gray"
+                            placeholder="e.g. English, Arabic, French" type="text" value="English" />
+                    </div>
+
+                    <!-- Goal -->
+                    <div class="flex flex-col gap-2">
+                        <label
+                            class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">flag</span>
+                            goal / project_context
+                        </label>
+                        <input id="goalInput"
+                            class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary focus:ring-0 transition-all placeholder:text-code-gray"
+                            placeholder="e.g. Building a RAG chatbot for my final-year project" type="text" />
                     </div>
 
                     <!-- Interests/Technical Focus -->
@@ -216,33 +307,77 @@
                         <label
                             class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
                             <span class="material-symbols-outlined text-[14px]">label</span>
-                            technical_focus (technical focus chips)
+                            interests / technical_focus
                         </label>
                         <div class="flex flex-wrap gap-2 pt-1" id="interestsContainer">
                             <button
                                 class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
-                                onclick="toggleTag(this)" data-value="RAG" type="button">
+                                onclick="toggleTag(this, 'interests')" data-value="RAG" type="button">
                                 <span>RAG</span>
                                 <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
                             </button>
                             <button
                                 class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
-                                onclick="toggleTag(this)" data-value="LLMOPS" type="button">
+                                onclick="toggleTag(this, 'interests')" data-value="LLMOPS" type="button">
                                 <span>LLMOPS</span>
                                 <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
                             </button>
                             <button
                                 class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
-                                onclick="toggleTag(this)" data-value="VECTOR_DB" type="button">
+                                onclick="toggleTag(this, 'interests')" data-value="VECTOR_DB" type="button">
                                 <span>VECTOR_DB</span>
                                 <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
                             </button>
                             <button
                                 class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
-                                onclick="toggleTag(this)" data-value="FRONTEND_UI" type="button">
+                                onclick="toggleTag(this, 'interests')" data-value="FRONTEND_UI" type="button">
                                 <span>FRONTEND_UI</span>
                                 <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
                             </button>
+                            <button
+                                class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
+                                onclick="toggleTag(this, 'interests')" data-value="NLP" type="button">
+                                <span>NLP</span>
+                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
+                            </button>
+                            <button
+                                class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
+                                onclick="toggleTag(this, 'interests')" data-value="PROMPT_ENG" type="button">
+                                <span>PROMPT_ENG</span>
+                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tools & Technologies -->
+                    <div class="flex flex-col gap-2">
+                        <label
+                            class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">build</span>
+                            tools / technologies
+                        </label>
+                        <div class="flex flex-wrap gap-2 pt-1" id="toolsContainer">
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="FastAPI" type="button"><span>FastAPI</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="Python" type="button"><span>Python</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="Docker" type="button"><span>Docker</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="PostgreSQL" type="button"><span>PostgreSQL</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="React" type="button"><span>React</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="ChromaDB" type="button"><span>ChromaDB</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                        </div>
+                    </div>
+
+                    <!-- Avoid Topics -->
+                    <div class="flex flex-col gap-2">
+                        <label
+                            class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">block</span>
+                            avoid_topics (negative constraints)
+                        </label>
+                        <div class="flex flex-wrap gap-2 pt-1" id="avoidContainer">
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'avoid')" data-value="jargon" type="button"><span>jargon</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'avoid')" data-value="passive_voice" type="button"><span>passive_voice</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'avoid')" data-value="generic_advice" type="button"><span>generic_advice</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'avoid')" data-value="filler" type="button"><span>filler</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
                         </div>
                     </div>
 
@@ -251,15 +386,15 @@
                         <label
                             class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
                             <span class="material-symbols-outlined text-[14px]">description</span>
-                            professional_bio
+                            professional_bio (optional)
                         </label>
                         <textarea id="bioInput"
                             class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary focus:ring-0 transition-all resize-none placeholder:text-code-gray custom-scrollbar"
-                            placeholder="Describe your prompt refinement goals..." rows="3"></textarea>
+                            placeholder="Describe your background, role, and goals..." rows="2"></textarea>
                     </div>
 
                     <!-- Submit Action -->
-                    <div class="mt-4">
+                    <div class="mt-2">
                         <button id="onboardSubmitBtn"
                             class="w-full bg-primary-container text-terminal-bg font-headline-md text-headline-md font-bold py-4 flex items-center justify-center gap-3 transition-transform active:scale-[0.98] hover:opacity-90"
                             type="submit">
@@ -610,7 +745,10 @@
         let activeUserId = null;
         let activeDomain = null;
         let currentRefinementId = null;
-        let activeTags = [];
+        // Separate tag sets for interests, tools, and avoid topics
+        let activeTags = [];     // interests
+        let activeTools = [];    // tools
+        let activeAvoid = [];    // avoid_topics
 
         // Load persisted state if exists
         window.addEventListener('load', () => {
@@ -623,19 +761,24 @@
             }
         });
 
-        // Toggle Technical Focus tags in onboarding
-        function toggleTag(btn) {
+        // Toggle tag chips — group parameter routes to correct array
+        function toggleTag(btn, group) {
             const tagVal = btn.getAttribute('data-value');
             const icon = btn.querySelector('.tag-icon');
-            const isSelected = activeTags.includes(tagVal);
+            const arr = group === 'tools' ? activeTools : group === 'avoid' ? activeAvoid : activeTags;
+            const isSelected = arr.includes(tagVal);
 
             if (isSelected) {
-                activeTags = activeTags.filter(t => t !== tagVal);
+                if (group === 'tools') activeTools = activeTools.filter(t => t !== tagVal);
+                else if (group === 'avoid') activeAvoid = activeAvoid.filter(t => t !== tagVal);
+                else activeTags = activeTags.filter(t => t !== tagVal);
                 btn.classList.remove('border-primary/30', 'bg-primary/10', 'text-primary');
                 btn.classList.add('border-surface-border', 'bg-surface-container-high', 'text-on-surface-variant');
                 icon.innerText = 'add';
             } else {
-                activeTags.push(tagVal);
+                if (group === 'tools') activeTools.push(tagVal);
+                else if (group === 'avoid') activeAvoid.push(tagVal);
+                else activeTags.push(tagVal);
                 btn.classList.remove('border-surface-border', 'bg-surface-container-high', 'text-on-surface-variant');
                 btn.classList.add('border-primary/30', 'bg-primary/10', 'text-primary');
                 icon.innerText = 'close';
@@ -647,6 +790,11 @@
             e.preventDefault();
             const userId = document.getElementById('userIdInput').value.trim();
             const domain = document.getElementById('domainSelect').value;
+            const experienceLevel = document.getElementById('experienceLevelSelect').value;
+            const tonePreference = document.getElementById('toneSelect').value;
+            const outputFormat = document.getElementById('outputFormatSelect').value;
+            const preferredLanguage = document.getElementById('preferredLanguageInput').value.trim() || 'English';
+            const goal = document.getElementById('goalInput').value.trim();
             const bio = document.getElementById('bioInput').value.trim();
             const submitBtn = document.getElementById('onboardSubmitBtn');
 
@@ -662,7 +810,14 @@
                     body: JSON.stringify({
                         user_id: userId,
                         domain: domain,
+                        experience_level: experienceLevel,
+                        tone_preference: tonePreference,
+                        output_format_preference: outputFormat,
+                        preferred_language: preferredLanguage,
+                        goal: goal || null,
                         interests: activeTags,
+                        tools: activeTools,
+                        avoid_topics: activeAvoid,
                         bio: bio || null
                     })
                 });
@@ -710,7 +865,15 @@
             document.getElementById('workspaceView').classList.remove('hidden');
 
             document.getElementById('appbarUser').innerText = activeUserId;
-            document.getElementById('appbarDomain').innerText = activeDomain === 'dev' ? 'Software Dev' : activeDomain === 'data_analysis' ? 'Data Analysis' : 'Marketing';
+            const domainLabels = {
+                dev: 'Software Dev',
+                marketing: 'Marketing',
+                data_analysis: 'Data Analysis',
+                education: 'Education',
+                research: 'Research',
+                creative_writing: 'Creative Writing',
+            };
+            document.getElementById('appbarDomain').innerText = domainLabels[activeDomain] || activeDomain;
 
             document.getElementById('helpActiveUser').innerText = activeUserId;
             document.getElementById('helpActiveDomain').innerText = activeDomain;
