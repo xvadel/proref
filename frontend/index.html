@@ -154,7 +154,7 @@
     <!-- ────────────────────────────────────────────────────────
        ONBOARDING VIEW (Shown if activeUserId is null)
     ──────────────────────────────────────────────────────── -->
-    <div id="onboardingView" class="relative z-10 flex-grow flex items-center justify-center p-gutter">
+    <div id="onboardingView" class="relative z-10 flex-grow flex items-start justify-center p-gutter overflow-y-auto h-screen custom-scrollbar">
         <!-- Atmospheric Background Overlay -->
         <div class="fixed inset-0 pointer-events-none z-0">
             <div
@@ -164,7 +164,7 @@
                 style="animation-delay: -5s;"></div>
         </div>
 
-        <div class="w-full max-w-[540px] flex flex-col gap-stack-lg z-10">
+        <div class="w-full max-w-[540px] flex flex-col gap-stack-lg z-10 py-8">
             <!-- Logo Section -->
             <div class="flex flex-col items-center gap-stack-sm text-center">
                 <img alt="ProRef AI Logo" class="w-20 h-20 mb-stack-sm"
