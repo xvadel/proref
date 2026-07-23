@@ -7,10 +7,10 @@
     <title>ProRef AI - Workspace</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link
-        href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap"
+        href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap"
         rel="stylesheet" />
     <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
     <script id="tailwind-config">
         tailwind.config = {
@@ -107,44 +107,48 @@
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
 
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #020617; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1E293B; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #00ced1; }
 
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #020617;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #1E293B;
-            border-radius: 0px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #00ced1;
-        }
-
-        /* Override rounded corners globally for a flat look */
-        * {
-            border-radius: 0 !important;
-        }
+        * { border-radius: 0 !important; }
 
         @keyframes subtle-drift {
-            0% {
-                transform: translateY(0px) translateX(0px);
-            }
+            0%   { transform: translateY(0px) translateX(0px); }
+            50%  { transform: translateY(-5px) translateX(2px); }
+            100% { transform: translateY(0px) translateX(0px); }
+        }
+        .animate-drift { animation: subtle-drift 10s ease-in-out infinite; }
 
-            50% {
-                transform: translateY(-5px) translateX(2px);
-            }
-
-            100% {
-                transform: translateY(0px) translateX(0px);
-            }
+        /* Chat bubble styles */
+        .chat-bubble-user {
+            background: rgba(0,206,209,0.08);
+            border: 1px solid rgba(0,206,209,0.25);
+        }
+        .chat-bubble-assistant {
+            background: #1d2022;
+            border: 1px solid #1E293B;
         }
 
-        .animate-drift {
-            animation: subtle-drift 10s ease-in-out infinite;
+        /* Settings panel slide */
+        #settingsDrawer {
+            transition: transform 0.25s ease, opacity 0.25s ease;
+        }
+        #settingsDrawer.closed {
+            transform: translateX(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        #settingsDrawer.open {
+            transform: translateX(0);
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* Format picker modal */
+        #formatModal {
+            transition: opacity 0.2s ease;
         }
     </style>
 </head>
@@ -152,58 +156,43 @@
 <body class="bg-terminal-bg text-on-surface font-body-base antialiased overflow-hidden min-h-screen flex flex-col">
 
     <!-- ────────────────────────────────────────────────────────
-       ONBOARDING VIEW (Shown if activeUserId is null)
+       ONBOARDING VIEW
     ──────────────────────────────────────────────────────── -->
     <div id="onboardingView" class="relative z-10 flex-grow flex items-start justify-center p-gutter overflow-y-auto h-screen custom-scrollbar">
-        <!-- Atmospheric Background Overlay -->
         <div class="fixed inset-0 pointer-events-none z-0">
-            <div
-                class="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full animate-drift">
-            </div>
-            <div class="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full animate-drift"
-                style="animation-delay: -5s;"></div>
+            <div class="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full animate-drift"></div>
+            <div class="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full animate-drift" style="animation-delay: -5s;"></div>
         </div>
 
         <div class="w-full max-w-[540px] flex flex-col gap-stack-lg z-10 py-8">
-            <!-- Logo Section -->
             <div class="flex flex-col items-center gap-stack-sm text-center">
-                <img alt="ProRef AI Logo" class="w-20 h-20 mb-stack-sm"
-                    src="/static/assets/logo.png" />
-                <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Configure Your Environment
-                </h1>
-                <p class="font-body-base text-body-base text-on-surface-variant max-w-[400px]">Set up your technical
-                    identity to help ProRef refine prompts tailored to your specific workflow and domain.</p>
+                <img alt="ProRef AI Logo" class="w-20 h-20 mb-stack-sm" src="/static/assets/logo.png" />
+                <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Configure Your Environment</h1>
+                <p class="font-body-base text-body-base text-on-surface-variant max-w-[400px]">Set up your core identity. You can tune tone, format, and goals from the workspace at any time.</p>
             </div>
 
-            <!-- Onboarding Card -->
             <div class="bg-surface-container-low border border-surface-border p-8 shadow-2xl relative">
-                <!-- Top Accent Line -->
                 <div class="absolute top-0 left-0 right-0 h-[2px] bg-primary"></div>
                 <form class="flex flex-col gap-5" id="onboardingForm" onsubmit="handleOnboarding(event)">
-                    <!-- User ID Field -->
+
+                    <!-- User ID -->
                     <div class="flex flex-col gap-2">
-                        <label
-                            class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[14px]">id_card</span>
-                            user_id
+                        <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">id_card</span> user_id
                         </label>
                         <input id="userIdInput" required
-                            class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary focus:ring-0 transition-all placeholder:text-code-gray"
+                            class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary transition-all placeholder:text-code-gray"
                             placeholder="e.g. dev_commander_01" type="text" />
                     </div>
 
-                    <!-- Row: Domain + Experience Level -->
+                    <!-- Row: Domain + Experience -->
                     <div class="grid grid-cols-2 gap-4">
-                        <!-- Domain Dropdown -->
                         <div class="flex flex-col gap-2">
-                            <label
-                                class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[14px]">terminal</span>
-                                domain
+                            <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[14px]">terminal</span> domain
                             </label>
                             <div class="relative">
-                                <select id="domainSelect" required
-                                    class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-0 transition-all cursor-pointer">
+                                <select id="domainSelect" required class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary transition-all cursor-pointer">
                                     <option value="dev">Software Dev</option>
                                     <option value="marketing">Marketing</option>
                                     <option value="data_analysis">Data Analysis</option>
@@ -211,189 +200,73 @@
                                     <option value="research">Research</option>
                                     <option value="creative_writing">Creative Writing</option>
                                 </select>
-                                <span
-                                    class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
                             </div>
                         </div>
-
-                        <!-- Experience Level -->
                         <div class="flex flex-col gap-2">
-                            <label
-                                class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[14px]">school</span>
-                                experience
+                            <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[14px]">school</span> experience
                             </label>
                             <div class="relative">
-                                <select id="experienceLevelSelect"
-                                    class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-0 transition-all cursor-pointer">
+                                <select id="experienceLevelSelect" class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary transition-all cursor-pointer">
                                     <option value="beginner">Beginner</option>
                                     <option value="intermediate" selected>Intermediate</option>
                                     <option value="expert">Expert</option>
                                 </select>
-                                <span
-                                    class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Row: Tone + Output Format -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <!-- Tone Preference -->
-                        <div class="flex flex-col gap-2">
-                            <label
-                                class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[14px]">record_voice_over</span>
-                                tone
-                            </label>
-                            <div class="relative">
-                                <select id="toneSelect"
-                                    class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-0 transition-all cursor-pointer">
-                                    <option value="formal">Formal</option>
-                                    <option value="balanced" selected>Balanced</option>
-                                    <option value="casual">Casual</option>
-                                </select>
-                                <span
-                                    class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
-                            </div>
-                        </div>
-
-                        <!-- Output Format -->
-                        <div class="flex flex-col gap-2">
-                            <label
-                                class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[14px]">format_list_bulleted</span>
-                                output_format
-                            </label>
-                            <div class="relative">
-                                <select id="outputFormatSelect"
-                                    class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-0 transition-all cursor-pointer">
-                                    <option value="paragraph" selected>Paragraph</option>
-                                    <option value="bullets">Bullets</option>
-                                    <option value="structured">Structured</option>
-                                    <option value="code">Code-First</option>
-                                </select>
-                                <span
-                                    class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Preferred Language -->
+                    <!-- Interests -->
                     <div class="flex flex-col gap-2">
-                        <label
-                            class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[14px]">translate</span>
-                            preferred_language
-                        </label>
-                        <input id="preferredLanguageInput"
-                            class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary focus:ring-0 transition-all placeholder:text-code-gray"
-                            placeholder="e.g. English, Arabic, French" type="text" value="English" />
-                    </div>
-
-                    <!-- Goal -->
-                    <div class="flex flex-col gap-2">
-                        <label
-                            class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[14px]">flag</span>
-                            goal / project_context
-                        </label>
-                        <input id="goalInput"
-                            class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary focus:ring-0 transition-all placeholder:text-code-gray"
-                            placeholder="e.g. Building a RAG chatbot for my final-year project" type="text" />
-                    </div>
-
-                    <!-- Interests/Technical Focus -->
-                    <div class="flex flex-col gap-2">
-                        <label
-                            class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[14px]">label</span>
-                            interests / technical_focus
+                        <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">label</span> interests / technical_focus
                         </label>
                         <div class="flex flex-wrap gap-2 pt-1" id="interestsContainer">
-                            <button
-                                class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
-                                onclick="toggleTag(this, 'interests')" data-value="RAG" type="button">
-                                <span>RAG</span>
-                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
-                            </button>
-                            <button
-                                class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
-                                onclick="toggleTag(this, 'interests')" data-value="LLMOPS" type="button">
-                                <span>LLMOPS</span>
-                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
-                            </button>
-                            <button
-                                class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
-                                onclick="toggleTag(this, 'interests')" data-value="VECTOR_DB" type="button">
-                                <span>VECTOR_DB</span>
-                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
-                            </button>
-                            <button
-                                class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
-                                onclick="toggleTag(this, 'interests')" data-value="FRONTEND_UI" type="button">
-                                <span>FRONTEND_UI</span>
-                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
-                            </button>
-                            <button
-                                class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
-                                onclick="toggleTag(this, 'interests')" data-value="NLP" type="button">
-                                <span>NLP</span>
-                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
-                            </button>
-                            <button
-                                class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50"
-                                onclick="toggleTag(this, 'interests')" data-value="PROMPT_ENG" type="button">
-                                <span>PROMPT_ENG</span>
-                                <span class="material-symbols-outlined text-[12px] tag-icon">add</span>
-                            </button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'interests')" data-value="RAG" type="button"><span>RAG</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'interests')" data-value="LLMOPS" type="button"><span>LLMOPS</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'interests')" data-value="VECTOR_DB" type="button"><span>VECTOR_DB</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'interests')" data-value="NLP" type="button"><span>NLP</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'interests')" data-value="PROMPT_ENG" type="button"><span>PROMPT_ENG</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
                         </div>
                     </div>
 
-                    <!-- Tools & Technologies -->
+                    <!-- Tools -->
                     <div class="flex flex-col gap-2">
-                        <label
-                            class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[14px]">build</span>
-                            tools / technologies
+                        <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">build</span> tools / technologies
                         </label>
                         <div class="flex flex-wrap gap-2 pt-1" id="toolsContainer">
-                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="FastAPI" type="button"><span>FastAPI</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
-                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="Python" type="button"><span>Python</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
-                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="Docker" type="button"><span>Docker</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
-                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="PostgreSQL" type="button"><span>PostgreSQL</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
-                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="React" type="button"><span>React</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
-                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'tools')" data-value="ChromaDB" type="button"><span>ChromaDB</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'tools')" data-value="FastAPI" type="button"><span>FastAPI</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'tools')" data-value="Python" type="button"><span>Python</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'tools')" data-value="Docker" type="button"><span>Docker</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'tools')" data-value="ChromaDB" type="button"><span>ChromaDB</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
                         </div>
                     </div>
 
-                    <!-- Avoid Topics -->
+                    <!-- Avoid -->
                     <div class="flex flex-col gap-2">
-                        <label
-                            class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[14px]">block</span>
-                            avoid_topics (negative constraints)
+                        <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">block</span> avoid_topics
                         </label>
                         <div class="flex flex-wrap gap-2 pt-1" id="avoidContainer">
-                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'avoid')" data-value="jargon" type="button"><span>jargon</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
-                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'avoid')" data-value="passive_voice" type="button"><span>passive_voice</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
-                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'avoid')" data-value="generic_advice" type="button"><span>generic_advice</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
-                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this, 'avoid')" data-value="filler" type="button"><span>filler</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'avoid')" data-value="jargon" type="button"><span>jargon</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'avoid')" data-value="passive_voice" type="button"><span>passive_voice</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
+                            <button class="tag-btn flex items-center gap-1 px-3 py-1.5 border border-surface-border bg-surface-container-high font-status-label text-status-label text-on-surface-variant transition-all hover:border-primary/50" onclick="toggleTag(this,'avoid')" data-value="filler" type="button"><span>filler</span><span class="material-symbols-outlined text-[12px] tag-icon">add</span></button>
                         </div>
                     </div>
 
-                    <!-- Bio Textarea -->
+                    <!-- Bio -->
                     <div class="flex flex-col gap-2">
-                        <label
-                            class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[14px]">description</span>
-                            professional_bio (optional)
+                        <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">description</span> professional_bio (optional)
                         </label>
                         <textarea id="bioInput"
-                            class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary focus:ring-0 transition-all resize-none placeholder:text-code-gray custom-scrollbar"
+                            class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary transition-all resize-none placeholder:text-code-gray custom-scrollbar"
                             placeholder="Describe your background, role, and goals..." rows="2"></textarea>
                     </div>
 
-                    <!-- Submit Action -->
                     <div class="mt-2">
                         <button id="onboardSubmitBtn"
                             class="w-full bg-primary-container text-terminal-bg font-headline-md text-headline-md font-bold py-4 flex items-center justify-center gap-3 transition-transform active:scale-[0.98] hover:opacity-90"
@@ -405,27 +278,22 @@
                 </form>
             </div>
 
-            <!-- Footer Help Text -->
-            <p
-                class="text-center font-status-label text-status-label text-on-surface-variant flex items-center justify-center gap-2">
+            <p class="text-center font-status-label text-status-label text-on-surface-variant flex items-center justify-center gap-2">
                 <span class="material-symbols-outlined text-[16px]">verified_user</span>
-                Secure Technical Instance • Version 2.0.0
+                Secure Technical Instance • Version 3.0.0
             </p>
         </div>
     </div>
 
     <!-- Success Modal -->
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-terminal-bg/90 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300"
-        id="successModal">
-        <div
-            class="bg-surface border border-primary/50 p-10 max-w-md text-center flex flex-col items-center gap-6 shadow-[0_0_50px_rgba(0,206,209,0.1)]">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-terminal-bg/90 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300" id="successModal">
+        <div class="bg-surface border border-primary/50 p-10 max-w-md text-center flex flex-col items-center gap-6 shadow-[0_0_50px_rgba(0,206,209,0.1)]">
             <div class="w-16 h-16 bg-primary/20 flex items-center justify-center text-primary">
                 <span class="material-symbols-outlined text-[40px]">check_circle</span>
             </div>
             <div class="flex flex-col gap-2">
                 <h2 class="font-headline-md text-headline-md text-primary">Environment Ready</h2>
-                <p class="font-body-base text-body-base text-on-surface-variant">Your technical profile has been
-                    synchronized. Redirecting to workspace...</p>
+                <p class="font-body-base text-body-base text-on-surface-variant">Your technical profile has been synchronized. Redirecting to workspace...</p>
             </div>
             <div class="w-full h-1 bg-surface-container-high overflow-hidden">
                 <div class="h-full bg-primary w-0" id="progressBar"></div>
@@ -433,23 +301,66 @@
         </div>
     </div>
 
+    <!-- ────────────────────────────────────────────────────────
+       FILE FORMAT PICKER MODAL (shown before refinement)
+    ──────────────────────────────────────────────────────── -->
+    <div id="formatModal" class="fixed inset-0 z-50 flex items-center justify-center bg-terminal-bg/80 backdrop-blur-sm opacity-0 pointer-events-none">
+        <div class="bg-surface-container-low border border-surface-border p-8 max-w-md w-full flex flex-col gap-6 shadow-2xl relative">
+            <div class="absolute top-0 left-0 right-0 h-[2px] bg-primary"></div>
+            <div>
+                <h2 class="font-headline-md text-headline-md text-on-surface mb-1">Output File Format</h2>
+                <p class="text-sm text-on-surface-variant">Choose how you want to export the refined prompt. This also affects how the LLM structures the output.</p>
+            </div>
+            <div class="grid grid-cols-3 gap-3" id="formatOptions">
+                <button onclick="selectFormat('txt')"
+                    class="format-btn flex flex-col items-center gap-2 p-4 border border-surface-border bg-surface-container hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                    data-format="txt">
+                    <span class="material-symbols-outlined text-[32px] text-on-surface-variant group-hover:text-primary transition-colors">text_snippet</span>
+                    <span class="font-status-label text-status-label text-on-surface-variant group-hover:text-primary">.TXT</span>
+                    <span class="text-[10px] text-code-gray text-center">Plain text</span>
+                </button>
+                <button onclick="selectFormat('md')"
+                    class="format-btn flex flex-col items-center gap-2 p-4 border border-surface-border bg-surface-container hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                    data-format="md">
+                    <span class="material-symbols-outlined text-[32px] text-on-surface-variant group-hover:text-primary transition-colors">markdown</span>
+                    <span class="font-status-label text-status-label text-on-surface-variant group-hover:text-primary">.MD</span>
+                    <span class="text-[10px] text-code-gray text-center">Markdown</span>
+                </button>
+                <button onclick="selectFormat('html')"
+                    class="format-btn flex flex-col items-center gap-2 p-4 border border-surface-border bg-surface-container hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                    data-format="html">
+                    <span class="material-symbols-outlined text-[32px] text-on-surface-variant group-hover:text-primary transition-colors">code</span>
+                    <span class="font-status-label text-status-label text-on-surface-variant group-hover:text-primary">.HTML</span>
+                    <span class="text-[10px] text-code-gray text-center">Structured page</span>
+                </button>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="confirmFormatAndRefine()"
+                    class="flex-1 bg-primary text-terminal-bg font-bold py-3 flex items-center justify-center gap-2 active:scale-95 transition-transform" id="confirmFormatBtn">
+                    <span class="material-symbols-outlined">auto_fix_high</span>
+                    Refine with selected format
+                </button>
+                <button onclick="closeFormatModal()"
+                    class="px-4 py-3 border border-surface-border text-on-surface-variant hover:text-on-surface transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- ────────────────────────────────────────────────────────
-       WORKSPACE VIEW (Hidden if activeUserId is null)
+       WORKSPACE VIEW
     ──────────────────────────────────────────────────────── -->
     <div id="workspaceView" class="hidden flex-grow flex flex-row">
+
         <!-- Sidebar Navigation -->
-        <aside
-            class="h-screen w-64 fixed left-0 top-0 border-r border-surface-border bg-surface flex flex-col py-6 z-50">
+        <aside class="h-screen w-64 fixed left-0 top-0 border-r border-surface-border bg-surface flex flex-col py-6 z-50">
             <div class="px-6 mb-8">
                 <div class="flex items-center gap-3">
-                    <img alt="ProRef AI Logo" class="w-8 h-8 object-contain"
-                        src="/static/assets/logo.png" />
+                    <img alt="ProRef AI Logo" class="w-8 h-8 object-contain" src="/static/assets/logo.png" />
                     <div>
-                        <h1 class="font-headline-md text-headline-md font-bold text-primary leading-tight">ProRef AI
-                        </h1>
-                        <p class="text-xs text-on-surface-variant uppercase tracking-widest font-status-label">Technical
-                            Edition</p>
+                        <h1 class="font-headline-md text-headline-md font-bold text-primary leading-tight">ProRef AI</h1>
+                        <p class="text-xs text-on-surface-variant uppercase tracking-widest font-status-label">Technical Edition</p>
                     </div>
                 </div>
             </div>
@@ -457,8 +368,7 @@
             <nav class="flex-1 space-y-1 overflow-y-auto px-2" id="sidebarNav">
                 <button onclick="switchTab('workspace')" id="tabBtn-workspace"
                     class="w-full text-left bg-primary/10 text-primary border-r-4 border-primary px-4 py-3 flex items-center gap-3 transition-colors duration-200">
-                    <span class="material-symbols-outlined"
-                        style="font-variation-settings: 'FILL' 1;">edit_square</span>
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">edit_square</span>
                     <span class="font-body-base">Workspace</span>
                 </button>
                 <button onclick="switchTab('history')" id="tabBtn-history"
@@ -473,11 +383,10 @@
                 </button>
             </nav>
 
-            <div class="px-4 mt-auto pt-6 border-t border-surface-border space-y-4">
+            <div class="px-4 mt-auto pt-6 border-t border-surface-border space-y-2">
                 <button onclick="resetWorkspace()"
                     class="w-full bg-primary text-terminal-bg font-bold py-3 flex items-center justify-center gap-2 active:scale-95 transition-transform">
-                    <span class="material-symbols-outlined">add</span>
-                    New Refinement
+                    <span class="material-symbols-outlined">add</span> New Refinement
                 </button>
                 <button onclick="handleLogout()"
                     class="w-full text-left text-on-surface-variant hover:text-error px-4 py-3 flex items-center gap-3 transition-colors duration-200">
@@ -488,73 +397,130 @@
         </aside>
 
         <!-- Top AppBar -->
-        <header
-            class="h-16 fixed top-0 right-0 left-64 z-40 border-b border-surface-border bg-surface flex items-center justify-between px-8">
+        <header class="h-16 fixed top-0 right-0 left-64 z-40 border-b border-surface-border bg-surface flex items-center justify-between px-8">
             <div class="flex items-center gap-8">
-                <span
-                    class="font-headline-md text-headline-md font-black text-on-surface tracking-tighter">PROREF</span>
-                <nav class="hidden lg:flex items-center gap-6">
-                    <span
-                        class="text-on-surface-variant font-status-label text-status-label uppercase tracking-wider">Models</span>
-                    <span
-                        class="text-on-surface-variant font-status-label text-status-label uppercase tracking-wider">Datasets</span>
-                </nav>
+                <span class="font-headline-md text-headline-md font-black text-on-surface tracking-tighter">PROREF</span>
             </div>
-            <div class="flex items-center gap-6">
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden sm:block">
-                        <div class="text-sm font-bold" id="appbarUser">demo_user</div>
-                        <div class="text-xs text-on-surface-variant uppercase font-status-label" id="appbarDomain">dev
-                        </div>
-                    </div>
-                    <div class="w-8 h-8 bg-surface-container-highest border border-surface-border overflow-hidden">
-                        <img class="w-full h-full object-cover"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxFUCxguH4Q6f6QVkAtSAHM-mUtB8WAGDQuzbqubPBpfwEunAYO2aSWsm-LHRQNxsI_ORCMmShmFcG011m9Q5iBNkjnESoi7kuOcyNP0bgmtgZg2XpzGalDkbDRu3RbCREAdT4rEwPMu6WMThONvj5iRdLSs4PaEeLskTcEUi2usqlEYJSWNXHS9R0gWipsGX1HzWzz9tR7CwTFGhdG6BSel4kb4lVXkU2bL69dqMh_m-SdnM1XZ7d278LnTTfSmuY3TltaRWxeac" />
-                    </div>
+            <div class="flex items-center gap-4">
+                <!-- Settings Gear -->
+                <button onclick="toggleSettingsDrawer()" title="Runtime Settings"
+                    class="flex items-center gap-1.5 px-3 py-1.5 border border-surface-border text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all text-xs font-status-label">
+                    <span class="material-symbols-outlined text-sm">tune</span>
+                    SETTINGS
+                </button>
+                <div class="text-right hidden sm:block">
+                    <div class="text-sm font-bold" id="appbarUser">—</div>
+                    <div class="text-xs text-on-surface-variant uppercase font-status-label" id="appbarDomain">—</div>
+                </div>
+                <div class="w-8 h-8 bg-primary/20 border border-primary/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-sm">person</span>
                 </div>
             </div>
         </header>
+
+        <!-- Runtime Settings Drawer (slides in from right) -->
+        <div id="settingsDrawer" class="fixed top-16 right-0 bottom-0 w-80 bg-surface border-l border-surface-border z-40 flex flex-col closed overflow-y-auto custom-scrollbar">
+            <div class="p-6 border-b border-surface-border flex items-center justify-between">
+                <div>
+                    <h3 class="font-headline-md text-headline-md text-on-surface">Runtime Settings</h3>
+                    <p class="text-xs text-on-surface-variant mt-0.5">Changes apply to the next refinement</p>
+                </div>
+                <button onclick="toggleSettingsDrawer()" class="text-on-surface-variant hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-6 flex flex-col gap-5 flex-1">
+                <!-- Tone -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[14px]">record_voice_over</span> tone
+                    </label>
+                    <div class="relative">
+                        <select id="ws-toneSelect" class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary transition-all cursor-pointer">
+                            <option value="formal">Formal</option>
+                            <option value="balanced" selected>Balanced</option>
+                            <option value="casual">Casual</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+                    </div>
+                </div>
+
+                <!-- Output Format -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[14px]">format_list_bulleted</span> output_format
+                    </label>
+                    <div class="relative">
+                        <select id="ws-outputFormatSelect" class="w-full bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 appearance-none focus:outline-none focus:border-primary transition-all cursor-pointer">
+                            <option value="paragraph" selected>Paragraph</option>
+                            <option value="bullets">Bullets</option>
+                            <option value="structured">Structured</option>
+                            <option value="code">Code-First</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+                    </div>
+                </div>
+
+                <!-- Preferred Language -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[14px]">translate</span> preferred_language
+                    </label>
+                    <input id="ws-preferredLanguageInput"
+                        class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary transition-all placeholder:text-code-gray"
+                        placeholder="e.g. English, Arabic" type="text" value="English" />
+                </div>
+
+                <!-- Goal -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-status-label text-status-label text-on-surface-variant uppercase flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[14px]">flag</span> goal / project_context
+                    </label>
+                    <textarea id="ws-goalInput" rows="3"
+                        class="bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-4 py-3 focus:outline-none focus:border-primary transition-all resize-none placeholder:text-code-gray custom-scrollbar"
+                        placeholder="e.g. Building a RAG chatbot for my final-year project"></textarea>
+                </div>
+
+                <button onclick="saveRuntimeSettings()"
+                    class="w-full bg-primary text-terminal-bg font-bold py-3 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                    <span class="material-symbols-outlined">save</span>
+                    Save Settings
+                </button>
+                <p class="text-xs text-on-surface-variant text-center" id="settingsSaveStatus"></p>
+            </div>
+        </div>
 
         <!-- Main Content Canvas -->
         <main class="pl-64 pt-16 w-full h-screen flex flex-col overflow-y-auto custom-scrollbar">
 
             <!-- PANEL: WORKSPACE -->
-            <div id="panel-workspace"
-                class="tab-panel-item flex-1 w-full max-w-[1200px] mx-auto p-gutter space-y-gutter">
-                <!-- Welcome Header -->
+            <div id="panel-workspace" class="tab-panel-item flex-1 w-full max-w-[1200px] mx-auto p-gutter space-y-gutter">
                 <section class="flex flex-col gap-2">
                     <h2 class="font-headline-lg text-headline-lg text-on-surface">Prompt Workspace</h2>
-                    <p class="text-on-surface-variant max-w-2xl">Refine raw language into precise technical
-                        instructions. Select your model parameters and define the output constraints below.</p>
+                    <p class="text-on-surface-variant max-w-2xl">Refine raw language into precise technical instructions. Use the <strong class="text-primary">Settings</strong> panel (top-right) to adjust tone, format, language and goal at any time.</p>
                 </section>
 
-                <!-- Bento Grid Layout -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-                    <!-- Input Section (Left Column) -->
+                    <!-- Input Section -->
                     <div class="lg:col-span-7 space-y-gutter">
                         <div class="bg-surface-container-low border border-surface-border p-6 flex flex-col gap-4">
                             <div class="flex items-center justify-between">
-                                <label id="inputLabel"
-                                    class="font-status-label text-status-label uppercase tracking-widest text-primary flex items-center gap-2">
+                                <label id="inputLabel" class="font-status-label text-status-label uppercase tracking-widest text-primary flex items-center gap-2">
                                     <span class="material-symbols-outlined text-sm">terminal</span>
                                     Rough Prompt Input
                                 </label>
                                 <div class="flex items-center gap-4">
-                                    <div
-                                        class="flex items-center gap-2 border border-surface-border px-2.5 py-1 bg-surface-container-high">
+                                    <div class="flex items-center gap-2 border border-surface-border px-2.5 py-1 bg-surface-container-high">
                                         <input type="checkbox" id="arabicModeCheckbox"
-                                            class="bg-terminal-bg border-surface-border text-primary focus:ring-0 focus:ring-offset-0 h-4 w-4"
+                                            class="bg-terminal-bg border-surface-border text-primary focus:ring-0 h-4 w-4"
                                             onchange="toggleArabicMode(this)" />
-                                        <label for="arabicModeCheckbox"
-                                            class="font-status-label text-[10px] text-on-surface-variant cursor-pointer select-none">ARABIC
-                                            MODE</label>
+                                        <label for="arabicModeCheckbox" class="font-status-label text-[10px] text-on-surface-variant cursor-pointer select-none">ARABIC MODE</label>
                                     </div>
-                                    <span class="text-xs text-code-gray font-code-block" id="charCount">0
-                                        characters</span>
+                                    <span class="text-xs text-code-gray font-code-block" id="charCount">0 characters</span>
                                 </div>
                             </div>
                             <textarea id="rawPromptTextarea"
-                                class="w-full h-64 bg-terminal-bg border border-surface-border p-4 font-code-block text-on-surface placeholder:text-code-gray focus:border-primary focus:ring-0 transition-all resize-none"
+                                class="w-full h-56 bg-terminal-bg border border-surface-border p-4 font-code-block text-on-surface placeholder:text-code-gray focus:border-primary focus:ring-0 transition-all resize-none"
                                 placeholder="Paste your unrefined prompt here..."
                                 oninput="updateCharCount()"></textarea>
 
@@ -562,87 +528,103 @@
                                 <div class="text-xs text-error font-code-block" id="refineErrorMsg"></div>
                                 <button
                                     class="bg-primary text-terminal-bg px-8 py-3 font-bold flex items-center gap-2 active:scale-95 transition-all"
-                                    id="refineBtn" onclick="handleRefinement()">
+                                    id="refineBtn" onclick="showFormatModal()">
                                     <span class="material-symbols-outlined" id="refineBtnIcon">auto_fix_high</span>
                                     <span id="refineBtnText">REFINE PROMPT</span>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Contextual Guidelines Card -->
-                        <div class="bg-surface-container border border-surface-border p-6 relative overflow-hidden">
-                            <div class="relative z-10 space-y-3">
+                        <!-- Optimization Tips -->
+                        <div class="bg-surface-container border border-surface-border p-6">
+                            <div class="space-y-3">
                                 <h3 class="font-headline-md text-headline-md text-primary">Optimization Tips</h3>
                                 <ul class="space-y-2">
                                     <li class="flex items-start gap-3 text-on-surface-variant">
-                                        <span
-                                            class="material-symbols-outlined text-primary text-lg mt-1">check_circle</span>
-                                        <span>Use <strong class="text-on-surface">Delimiters</strong> like ### or """ to
-                                            separate instructions from input text.</span>
+                                        <span class="material-symbols-outlined text-primary text-lg mt-1">check_circle</span>
+                                        <span>Use <strong class="text-on-surface">Delimiters</strong> like ### or """ to separate instructions from input text.</span>
                                     </li>
                                     <li class="flex items-start gap-3 text-on-surface-variant">
-                                        <span
-                                            class="material-symbols-outlined text-primary text-lg mt-1">check_circle</span>
-                                        <span>Specify a clear <strong class="text-on-surface">Persona</strong> to set
-                                            tone, style and perspective.</span>
+                                        <span class="material-symbols-outlined text-primary text-lg mt-1">check_circle</span>
+                                        <span>Specify a clear <strong class="text-on-surface">Persona</strong> to set tone, style and perspective.</span>
+                                    </li>
+                                    <li class="flex items-start gap-3 text-on-surface-variant">
+                                        <span class="material-symbols-outlined text-primary text-lg mt-1">check_circle</span>
+                                        <span>After refining, use <strong class="text-on-surface">Chat</strong> to iterate — add constraints, change tone, or request alternatives.</span>
                                     </li>
                                 </ul>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Results Section (Right Column) -->
+                    <!-- Results Section -->
                     <div class="lg:col-span-5 space-y-gutter">
-                        <div class="bg-surface-container-low border border-surface-border p-6 h-full flex flex-col gap-6"
-                            id="resultsCard">
+                        <div class="bg-surface-container-low border border-surface-border p-6 flex flex-col gap-5" id="resultsCard">
+                            <!-- Header with export buttons -->
                             <div class="flex items-center justify-between">
-                                <label
-                                    class="font-status-label text-status-label uppercase tracking-widest text-primary flex items-center gap-2">
+                                <label class="font-status-label text-status-label uppercase tracking-widest text-primary flex items-center gap-2">
                                     <span class="material-symbols-outlined text-sm">auto_awesome</span>
                                     Refined Output
                                 </label>
-                                <button class="text-on-surface-variant hover:text-primary transition-colors"
-                                    onclick="copyRefinedPrompt()">
-                                    <span class="material-symbols-outlined" id="copyBtnIcon">content_copy</span>
-                                </button>
-                            </div>
-
-                            <!-- English Translation Panel (Arabic Mode only) -->
-                            <div id="translationPanel" class="space-y-2 hidden">
-                                <h4
-                                    class="font-status-label text-xs uppercase text-on-surface-variant tracking-wider flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-sm">translate</span>
-                                    English Translation
-                                </h4>
-                                <div class="bg-terminal-bg border border-surface-border p-4">
-                                    <p id="translationText"
-                                        class="font-body-base text-sm text-on-background leading-relaxed"></p>
+                                <div class="flex items-center gap-2">
+                                    <!-- Copy -->
+                                    <button class="text-on-surface-variant hover:text-primary transition-colors p-1" onclick="copyRefinedPrompt()" title="Copy to clipboard">
+                                        <span class="material-symbols-outlined text-[18px]" id="copyBtnIcon">content_copy</span>
+                                    </button>
+                                    <!-- Save dropdown -->
+                                    <div class="relative" id="saveDropdownWrap">
+                                        <button onclick="toggleSaveDropdown()" title="Save file"
+                                            class="text-on-surface-variant hover:text-primary transition-colors p-1 flex items-center gap-0.5">
+                                            <span class="material-symbols-outlined text-[18px]">download</span>
+                                            <span class="material-symbols-outlined text-[12px]">expand_more</span>
+                                        </button>
+                                        <div id="saveDropdown" class="hidden absolute right-0 top-8 bg-surface-container-low border border-surface-border shadow-xl z-10 min-w-[140px]">
+                                            <button onclick="savePromptAs('txt')" class="w-full text-left px-4 py-2.5 text-sm font-code-block text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-[14px]">text_snippet</span> Save as .txt
+                                            </button>
+                                            <button onclick="savePromptAs('md')" class="w-full text-left px-4 py-2.5 text-sm font-code-block text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-[14px]">markdown</span> Save as .md
+                                            </button>
+                                            <button onclick="savePromptAs('html')" class="w-full text-left px-4 py-2.5 text-sm font-code-block text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-[14px]">code</span> Save as .html
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <!-- Chat toggle -->
+                                    <button onclick="toggleChatPanel()" title="Chat to iterate" id="chatToggleBtn"
+                                        class="text-on-surface-variant hover:text-primary transition-colors p-1">
+                                        <span class="material-symbols-outlined text-[18px]">chat</span>
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- Monospaced Code Block -->
-                            <div
-                                class="bg-terminal-bg border border-surface-border p-5 flex-1 relative group min-h-[200px]">
+                            <!-- Arabic translation -->
+                            <div id="translationPanel" class="space-y-2 hidden">
+                                <h4 class="font-status-label text-xs uppercase text-on-surface-variant tracking-wider flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">translate</span> English Translation
+                                </h4>
+                                <div class="bg-terminal-bg border border-surface-border p-4">
+                                    <p id="translationText" class="font-body-base text-sm text-on-background leading-relaxed"></p>
+                                </div>
+                            </div>
+
+                            <!-- Monospaced Output -->
+                            <div class="bg-terminal-bg border border-surface-border p-5 relative group min-h-[180px]">
                                 <pre id="refinedOutputPre"
                                     class="font-code-block text-code-block text-primary leading-relaxed whitespace-pre-wrap select-all">// Your refined output will appear here after clicking Refine Prompt</pre>
                             </div>
 
-                            <!-- Explanation Area -->
-                            <div class="space-y-3">
-                                <h4 class="font-status-label text-xs uppercase text-on-surface-variant tracking-wider">
-                                    Logic Explanation</h4>
-                                <p id="explanationText"
-                                    class="font-body-base text-on-surface-variant text-sm leading-relaxed">
+                            <!-- Explanation -->
+                            <div class="space-y-2">
+                                <h4 class="font-status-label text-xs uppercase text-on-surface-variant tracking-wider">Logic Explanation</h4>
+                                <p id="explanationText" class="font-body-base text-on-surface-variant text-sm leading-relaxed">
                                     Refine your prompt to generate logic context.
                                 </p>
                             </div>
 
-                            <!-- Feedback Area -->
-                            <div class="pt-4 border-t border-surface-border flex items-center justify-between gap-4 hidden"
-                                id="feedbackArea">
-                                <span
-                                    class="text-xs text-on-surface-variant uppercase tracking-wider font-status-label">Was
-                                    this output useful?</span>
+                            <!-- Feedback -->
+                            <div class="pt-4 border-t border-surface-border flex items-center justify-between gap-4 hidden" id="feedbackArea">
+                                <span class="text-xs text-on-surface-variant uppercase tracking-wider font-status-label">Was this output useful?</span>
                                 <div class="flex gap-2 items-center">
                                     <button onclick="submitFeedback('good')" id="feedbackGoodBtn"
                                         class="flex items-center gap-1.5 px-3 py-1.5 border border-surface-border bg-surface-container hover:border-success-teal/50 hover:text-success-teal transition-all">
@@ -658,15 +640,44 @@
                                 </div>
                             </div>
 
-                            <!-- Techniques & Tags -->
-                            <div class="pt-4 border-t border-surface-border space-y-3">
-                                <h4 class="font-status-label text-xs uppercase text-on-surface-variant tracking-wider">
-                                    Metatags</h4>
+                            <!-- Metatags -->
+                            <div class="pt-4 border-t border-surface-border space-y-2">
+                                <h4 class="font-status-label text-xs uppercase text-on-surface-variant tracking-wider">Metatags</h4>
                                 <div class="flex flex-wrap gap-2" id="metatagsContainer">
-                                    <span
-                                        class="bg-surface-container border border-surface-border text-on-surface-variant px-3 py-1 text-[10px] font-status-label uppercase tracking-tight">no
-                                        refinement active</span>
+                                    <span class="bg-surface-container border border-surface-border text-on-surface-variant px-3 py-1 text-[10px] font-status-label uppercase tracking-tight">no refinement active</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Panel (hidden by default, shown after refinement) -->
+                        <div id="chatPanel" class="hidden bg-surface-container-low border border-surface-border flex flex-col" style="max-height: 480px;">
+                            <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
+                                <div class="flex items-center gap-2 text-primary">
+                                    <span class="material-symbols-outlined text-sm">chat</span>
+                                    <span class="font-status-label text-status-label uppercase tracking-widest">Prompt Chat</span>
+                                </div>
+                                <button onclick="clearChat()" class="text-xs text-on-surface-variant hover:text-error transition-colors font-status-label">
+                                    <span class="material-symbols-outlined text-[14px]">delete_sweep</span>
+                                </button>
+                            </div>
+
+                            <!-- Messages -->
+                            <div id="chatMessages" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3 min-h-[200px]">
+                                <div class="text-center text-xs text-code-gray font-code-block py-4">
+                                    Ask me to modify the refined prompt — e.g. "Make it shorter" or "Add a constraint about Python 3.11"
+                                </div>
+                            </div>
+
+                            <!-- Chat Input -->
+                            <div class="border-t border-surface-border p-3 flex gap-2">
+                                <textarea id="chatInput" rows="2"
+                                    class="flex-1 bg-terminal-bg border border-surface-border text-on-surface font-code-block text-code-block px-3 py-2 focus:outline-none focus:border-primary transition-all resize-none placeholder:text-code-gray text-sm"
+                                    placeholder="e.g. Make it more concise..."
+                                    onkeydown="handleChatKey(event)"></textarea>
+                                <button onclick="sendChatMessage()" id="chatSendBtn"
+                                    class="bg-primary text-terminal-bg px-4 py-2 flex items-center justify-center active:scale-95 transition-all self-end">
+                                    <span class="material-symbols-outlined" id="chatSendIcon">send</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -674,44 +685,29 @@
             </div>
 
             <!-- PANEL: HISTORY -->
-            <div id="panel-history"
-                class="tab-panel-item hidden flex-1 w-full max-w-[1200px] mx-auto p-gutter space-y-gutter">
+            <div id="panel-history" class="tab-panel-item hidden flex-1 w-full max-w-[1200px] mx-auto p-gutter space-y-gutter">
                 <section class="flex flex-col gap-2">
                     <div class="flex items-center justify-between">
                         <h2 class="font-headline-lg text-headline-lg text-on-surface">Refinement History</h2>
-                        <span
-                            class="bg-primary/10 border border-primary/40 text-primary px-3 py-1 text-xs font-status-label uppercase"
-                            id="historyCounter">0 entries</span>
+                        <span class="bg-primary/10 border border-primary/40 text-primary px-3 py-1 text-xs font-status-label uppercase" id="historyCounter">0 entries</span>
                     </div>
-                    <p class="text-on-surface-variant max-w-2xl">Review, audit, and analyze past prompt optimizations
-                        recorded on this user instance.</p>
+                    <p class="text-on-surface-variant max-w-2xl">Review, audit, and analyze past prompt optimizations recorded on this user instance.</p>
                 </section>
-
-                <div class="space-y-4" id="historyEntriesList">
-                    <!-- Loaded dynamically via loadHistory() -->
-                </div>
+                <div class="space-y-4" id="historyEntriesList"></div>
             </div>
 
             <!-- PANEL: HELP -->
-            <div id="panel-help"
-                class="tab-panel-item hidden flex-1 w-full max-w-[1200px] mx-auto p-gutter space-y-gutter">
+            <div id="panel-help" class="tab-panel-item hidden flex-1 w-full max-w-[1200px] mx-auto p-gutter space-y-gutter">
                 <section class="flex flex-col gap-2">
                     <h2 class="font-headline-lg text-headline-lg text-on-surface">Instance Help & Settings</h2>
-                    <p class="text-on-surface-variant">Technical details and system documentation for the ProRef AI
-                        refiner.</p>
+                    <p class="text-on-surface-variant">Technical details and system documentation for the ProRef AI refiner.</p>
                 </section>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
                     <div class="bg-surface-container border border-surface-border p-6 space-y-4">
                         <h3 class="font-headline-md text-headline-md text-primary">System Operations</h3>
-                        <p class="text-sm text-on-surface-variant">This refiner utilizes Retrieval-Augmented Generation
-                            (RAG) to locate relevant prompt-engineering guidelines and domain specializations inside a
-                            local, persistent vector database (ChromaDB).</p>
-                        <p class="text-sm text-on-surface-variant">The feedback system reranks retrieved items based on
-                            historical success rates. When refinement results are rated as "Useful", they are stored as
-                            successful context references.</p>
+                        <p class="text-sm text-on-surface-variant">This refiner uses RAG to locate relevant prompt-engineering guidelines and domain specializations inside ChromaDB. HuggingFace specialist models extract domain signals before the LLM refinement step.</p>
+                        <p class="text-sm text-on-surface-variant">The feedback system reranks retrieved items based on historical success rates. "Useful" ratings promote examples into the knowledge base.</p>
                     </div>
-
                     <div class="bg-surface-container border border-surface-border p-6 space-y-4">
                         <h3 class="font-headline-md text-headline-md text-primary">Current Parameters</h3>
                         <div class="space-y-2 font-code-block text-xs">
@@ -727,11 +723,14 @@
                                 <span class="text-code-gray">local_embeddings</span>
                                 <span class="text-primary">all-MiniLM-L6-v2</span>
                             </div>
+                            <div class="flex justify-between border-b border-surface-border pb-1">
+                                <span class="text-code-gray">version</span>
+                                <span class="text-primary">3.0.0</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
         </main>
     </div>
 
@@ -740,28 +739,43 @@
     ──────────────────────────────────────────────────────── -->
     <script>
         // ──────────────────────────────────────────────────────
-        // State Management
+        // State
         // ──────────────────────────────────────────────────────
         let activeUserId = null;
         let activeDomain = null;
         let currentRefinementId = null;
-        // Separate tag sets for interests, tools, and avoid topics
-        let activeTags = [];     // interests
-        let activeTools = [];    // tools
-        let activeAvoid = [];    // avoid_topics
+        let selectedOutputFormat = 'txt';   // default export format
+        let chatHistory = [];               // [{role, content}]
+        let activeTags = [];
+        let activeTools = [];
+        let activeAvoid = [];
 
-        // Load persisted state if exists
+        // Persist stored profile for runtime settings
+        let storedProfile = {};
+
         window.addEventListener('load', () => {
             const savedUser = localStorage.getItem('proref_user_id');
             const savedDomain = localStorage.getItem('proref_domain');
             if (savedUser && savedDomain) {
                 activeUserId = savedUser;
                 activeDomain = savedDomain;
+                const sp = localStorage.getItem('proref_profile');
+                if (sp) storedProfile = JSON.parse(sp);
                 initializeWorkspaceState();
             }
         });
 
-        // Toggle tag chips — group parameter routes to correct array
+        // Close save dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const wrap = document.getElementById('saveDropdownWrap');
+            if (wrap && !wrap.contains(e.target)) {
+                document.getElementById('saveDropdown').classList.add('hidden');
+            }
+        });
+
+        // ──────────────────────────────────────────────────────
+        // Tag toggling
+        // ──────────────────────────────────────────────────────
         function toggleTag(btn, group) {
             const tagVal = btn.getAttribute('data-value');
             const icon = btn.querySelector('.tag-icon');
@@ -785,16 +799,14 @@
             }
         }
 
-        // Onboarding Form Handler
+        // ──────────────────────────────────────────────────────
+        // Onboarding
+        // ──────────────────────────────────────────────────────
         async function handleOnboarding(e) {
             e.preventDefault();
             const userId = document.getElementById('userIdInput').value.trim();
             const domain = document.getElementById('domainSelect').value;
             const experienceLevel = document.getElementById('experienceLevelSelect').value;
-            const tonePreference = document.getElementById('toneSelect').value;
-            const outputFormat = document.getElementById('outputFormatSelect').value;
-            const preferredLanguage = document.getElementById('preferredLanguageInput').value.trim() || 'English';
-            const goal = document.getElementById('goalInput').value.trim();
             const bio = document.getElementById('bioInput').value.trim();
             const submitBtn = document.getElementById('onboardSubmitBtn');
 
@@ -803,23 +815,26 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = 'Connecting... <span class="material-symbols-outlined animate-spin">sync</span>';
 
+            // Defaults for workspace settings (will be editable from settings drawer)
+            const payload = {
+                user_id: userId,
+                domain: domain,
+                experience_level: experienceLevel,
+                tone_preference: 'balanced',
+                output_format_preference: 'paragraph',
+                preferred_language: 'English',
+                goal: null,
+                interests: activeTags,
+                tools: activeTools,
+                avoid_topics: activeAvoid,
+                bio: bio || null
+            };
+
             try {
                 const res = await fetch('/onboard', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        domain: domain,
-                        experience_level: experienceLevel,
-                        tone_preference: tonePreference,
-                        output_format_preference: outputFormat,
-                        preferred_language: preferredLanguage,
-                        goal: goal || null,
-                        interests: activeTags,
-                        tools: activeTools,
-                        avoid_topics: activeAvoid,
-                        bio: bio || null
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!res.ok) {
@@ -827,13 +842,14 @@
                     throw new Error(err.detail || 'Connection failed.');
                 }
 
-                // Cache active session
                 activeUserId = userId;
                 activeDomain = domain;
+                storedProfile = payload;
+
                 localStorage.setItem('proref_user_id', userId);
                 localStorage.setItem('proref_domain', domain);
+                localStorage.setItem('proref_profile', JSON.stringify(payload));
 
-                // Show Environment Modal Animation
                 const modal = document.getElementById('successModal');
                 const bar = document.getElementById('progressBar');
                 modal.classList.remove('opacity-0', 'pointer-events-none');
@@ -859,80 +875,120 @@
             }
         }
 
-        // Apply state transitions to Workspace
         function initializeWorkspaceState() {
             document.getElementById('onboardingView').classList.add('hidden');
             document.getElementById('workspaceView').classList.remove('hidden');
 
             document.getElementById('appbarUser').innerText = activeUserId;
             const domainLabels = {
-                dev: 'Software Dev',
-                marketing: 'Marketing',
-                data_analysis: 'Data Analysis',
-                education: 'Education',
-                research: 'Research',
-                creative_writing: 'Creative Writing',
+                dev: 'Software Dev', marketing: 'Marketing',
+                data_analysis: 'Data Analysis', education: 'Education',
+                research: 'Research', creative_writing: 'Creative Writing'
             };
             document.getElementById('appbarDomain').innerText = domainLabels[activeDomain] || activeDomain;
-
             document.getElementById('helpActiveUser').innerText = activeUserId;
             document.getElementById('helpActiveDomain').innerText = activeDomain;
 
-            document.getElementById('refineBtn').disabled = false;
+            // Restore workspace settings from stored profile
+            if (storedProfile.tone_preference)
+                document.getElementById('ws-toneSelect').value = storedProfile.tone_preference;
+            if (storedProfile.output_format_preference)
+                document.getElementById('ws-outputFormatSelect').value = storedProfile.output_format_preference;
+            if (storedProfile.preferred_language)
+                document.getElementById('ws-preferredLanguageInput').value = storedProfile.preferred_language;
+            if (storedProfile.goal)
+                document.getElementById('ws-goalInput').value = storedProfile.goal;
+
             switchTab('workspace');
         }
 
-        // Navigation tab controller
-        function switchTab(tabId) {
-            // Update panels
-            document.querySelectorAll('.tab-panel-item').forEach(panel => {
-                panel.classList.add('hidden');
-            });
-            document.getElementById(`panel-${tabId}`).classList.remove('hidden');
-
-            // Update sidebar buttons styling
-            document.querySelectorAll('#sidebarNav button').forEach(btn => {
-                btn.classList.remove('bg-primary/10', 'text-primary', 'border-r-4', 'border-primary');
-                btn.classList.add('text-on-surface-variant', 'hover:text-on-surface', 'hover:bg-surface-container-high');
-                const span = btn.querySelector('.material-symbols-outlined');
-                if (span) span.style.fontVariationSettings = "'FILL' 0";
-            });
-
-            const activeBtn = document.getElementById(`tabBtn-${tabId}`);
-            if (activeBtn) {
-                activeBtn.classList.remove('text-on-surface-variant', 'hover:text-on-surface', 'hover:bg-surface-container-high');
-                activeBtn.classList.add('bg-primary/10', 'text-primary', 'border-r-4', 'border-primary');
-                const span = activeBtn.querySelector('.material-symbols-outlined');
-                if (span) span.style.fontVariationSettings = "'FILL' 1";
-            }
-
-            if (tabId === 'history') {
-                loadHistory();
-            }
-        }
-
-        // Live input feedback
-        function updateCharCount() {
-            const txt = document.getElementById('rawPromptTextarea').value;
-            document.getElementById('charCount').innerText = `${txt.length} characters`;
-        }
-
-        // Toggle Arabic Mode configurations
-        function toggleArabicMode(checkbox) {
-            const textarea = document.getElementById('rawPromptTextarea');
-            const label = document.getElementById('inputLabel');
-            if (checkbox.checked) {
-                textarea.dir = 'rtl';
-                textarea.placeholder = 'اكتب هنا باللغة العربية...';
-                label.innerHTML = '<span class="material-symbols-outlined text-sm">terminal</span> Arabic Prompt Input';
+        // ──────────────────────────────────────────────────────
+        // Settings Drawer
+        // ──────────────────────────────────────────────────────
+        function toggleSettingsDrawer() {
+            const drawer = document.getElementById('settingsDrawer');
+            if (drawer.classList.contains('closed')) {
+                drawer.classList.remove('closed');
+                drawer.classList.add('open');
             } else {
-                textarea.dir = 'ltr';
-                textarea.placeholder = 'Paste your unrefined prompt here...';
-                label.innerHTML = '<span class="material-symbols-outlined text-sm">terminal</span> Rough Prompt Input';
+                drawer.classList.remove('open');
+                drawer.classList.add('closed');
             }
         }
 
-        // Call RAG + Refine Endpoint
+        async function saveRuntimeSettings() {
+            const tone = document.getElementById('ws-toneSelect').value;
+            const outputFormat = document.getElementById('ws-outputFormatSelect').value;
+            const language = document.getElementById('ws-preferredLanguageInput').value.trim() || 'English';
+            const goal = document.getElementById('ws-goalInput').value.trim();
+            const statusEl = document.getElementById('settingsSaveStatus');
+
+            const updatedProfile = {
+                ...storedProfile,
+                user_id: activeUserId,
+                domain: activeDomain,
+                tone_preference: tone,
+                output_format_preference: outputFormat,
+                preferred_language: language,
+                goal: goal || null,
+            };
+
+            try {
+                const res = await fetch('/profile/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedProfile)
+                });
+                if (!res.ok) throw new Error('Save failed');
+
+                storedProfile = updatedProfile;
+                localStorage.setItem('proref_profile', JSON.stringify(updatedProfile));
+                statusEl.innerText = '✓ Settings saved — applies to next refinement';
+                statusEl.className = 'text-xs text-success-teal text-center';
+                setTimeout(() => { statusEl.innerText = ''; }, 3000);
+            } catch (err) {
+                statusEl.innerText = '✗ Failed to save settings';
+                statusEl.className = 'text-xs text-error text-center';
+            }
+        }
+
+        // ──────────────────────────────────────────────────────
+        // Format Modal
+        // ──────────────────────────────────────────────────────
+        function showFormatModal() {
+            const rawPrompt = document.getElementById('rawPromptTextarea').value.trim();
+            if (!rawPrompt) {
+                document.getElementById('refineErrorMsg').innerText = 'Please write a prompt to refine.';
+                return;
+            }
+            document.getElementById('refineErrorMsg').innerText = '';
+            const modal = document.getElementById('formatModal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function closeFormatModal() {
+            const modal = document.getElementById('formatModal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function selectFormat(fmt) {
+            selectedOutputFormat = fmt;
+            document.querySelectorAll('.format-btn').forEach(btn => {
+                const isSelected = btn.getAttribute('data-format') === fmt;
+                btn.classList.toggle('border-primary', isSelected);
+                btn.classList.toggle('bg-primary/10', isSelected);
+                btn.querySelector('.material-symbols-outlined').style.color = isSelected ? '#00ced1' : '';
+            });
+        }
+
+        function confirmFormatAndRefine() {
+            closeFormatModal();
+            handleRefinement();
+        }
+
+        // ──────────────────────────────────────────────────────
+        // Core Refinement
+        // ──────────────────────────────────────────────────────
         async function handleRefinement() {
             const rawPrompt = document.getElementById('rawPromptTextarea').value.trim();
             const btn = document.getElementById('refineBtn');
@@ -942,13 +998,8 @@
             const errorMsg = document.getElementById('refineErrorMsg');
             const isArabic = document.getElementById('arabicModeCheckbox').checked;
 
-            if (!rawPrompt) {
-                errorMsg.innerText = "Please write a prompt to refine.";
-                return;
-            }
-            errorMsg.innerText = "";
+            if (!rawPrompt) return;
 
-            // Toggle Loading State
             btn.disabled = true;
             icon.innerText = 'sync';
             icon.classList.add('animate-spin');
@@ -975,7 +1026,7 @@
                 const data = await res.json();
                 currentRefinementId = data.refinement_id;
 
-                // Set translation panel (Arabic Mode only)
+                // Translation panel
                 const translationPanel = document.getElementById('translationPanel');
                 if (isArabic && data.translated_english) {
                     document.getElementById('translationText').innerText = data.translated_english;
@@ -984,30 +1035,31 @@
                     translationPanel.classList.add('hidden');
                 }
 
-                // Set content
                 document.getElementById('refinedOutputPre').innerText = data.refined_prompt;
                 document.getElementById('explanationText').innerText = data.explanation;
 
-                // Render Metatags
+                // Metatags
                 const tagsContainer = document.getElementById('metatagsContainer');
                 tagsContainer.innerHTML = '';
+                const makeTag = (txt) => {
+                    const s = document.createElement('span');
+                    s.className = 'bg-primary/10 border border-primary/40 text-primary px-3 py-1 text-[10px] font-status-label uppercase tracking-tight';
+                    s.innerText = txt;
+                    return s;
+                };
+                const fmtTag = document.createElement('span');
+                fmtTag.className = 'bg-surface-container border border-surface-border text-on-surface-variant px-3 py-1 text-[10px] font-status-label uppercase tracking-tight';
+                fmtTag.innerText = `format: ${selectedOutputFormat}`;
+                tagsContainer.appendChild(makeTag(data.technique_used));
+                tagsContainer.appendChild(makeTag(`Domain: ${data.domain_tip_used}`));
+                tagsContainer.appendChild(fmtTag);
 
-                const techniqueTag = document.createElement('span');
-                techniqueTag.className = 'bg-primary/10 border border-primary/40 text-primary px-3 py-1 text-[10px] font-status-label uppercase tracking-tight';
-                techniqueTag.innerText = data.technique_used;
-
-                const domainTag = document.createElement('span');
-                domainTag.className = 'bg-primary/10 border border-primary/40 text-primary px-3 py-1 text-[10px] font-status-label uppercase tracking-tight';
-                domainTag.innerText = `Domain: ${data.domain_tip_used}`;
-
-                tagsContainer.appendChild(techniqueTag);
-                tagsContainer.appendChild(domainTag);
-
-                // Show Feedback controls
                 document.getElementById('feedbackArea').classList.remove('hidden');
                 resetFeedbackButtons();
 
-                // Flash Border feedback
+                // Reset chat for new refinement
+                clearChat();
+
                 resultsCard.style.borderColor = '#00ced1';
                 setTimeout(() => resultsCard.style.borderColor = '#1E293B', 1000);
 
@@ -1022,23 +1074,295 @@
             }
         }
 
-        // Copy refined prompt to clipboard
-        async function copyRefinedPrompt() {
-            const out = document.getElementById('refinedOutputPre').innerText;
-            const icon = document.getElementById('copyBtnIcon');
-            if (!out || out.startsWith('//')) return;
+        // ──────────────────────────────────────────────────────
+        // Export / Save
+        // ──────────────────────────────────────────────────────
+        function toggleSaveDropdown() {
+            document.getElementById('saveDropdown').classList.toggle('hidden');
+        }
 
+        function getRefinedText() {
+            const pre = document.getElementById('refinedOutputPre').innerText;
+            if (!pre || pre.startsWith('//')) return null;
+            return pre;
+        }
+
+        function savePromptAs(fmt) {
+            document.getElementById('saveDropdown').classList.add('hidden');
+            const text = getRefinedText();
+            if (!text) return;
+
+            let content, mimeType, filename;
+
+            if (fmt === 'txt') {
+                content = text;
+                mimeType = 'text/plain';
+                filename = `proref_prompt_${Date.now()}.txt`;
+            } else if (fmt === 'md') {
+                const explanation = document.getElementById('explanationText').innerText;
+                content = `# Refined Prompt\n\n${text}\n\n---\n\n## Why It's Better\n\n${explanation}`;
+                mimeType = 'text/markdown';
+                filename = `proref_prompt_${Date.now()}.md`;
+            } else if (fmt === 'html') {
+                content = buildHtmlExport(text);
+                mimeType = 'text/html';
+                filename = `proref_prompt_${Date.now()}.html`;
+            }
+
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function buildHtmlExport(promptText) {
+            const explanation = document.getElementById('explanationText').innerText;
+            const metaTags = Array.from(document.querySelectorAll('#metatagsContainer span')).map(s => s.innerText);
+            const ts = new Date().toLocaleString();
+
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ProRef AI — Refined Prompt</title>
+<style>
+  :root { --teal: #00ced1; --bg: #020617; --surface: #101415; --card: #1d2022; --border: #1E293B; --text: #e0e3e5; --muted: #bac9c9; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; padding: 40px 24px; max-width: 860px; margin: 0 auto; }
+  header { border-bottom: 2px solid var(--teal); padding-bottom: 20px; margin-bottom: 32px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { color: var(--teal); font-size: 1.4rem; letter-spacing: -0.02em; }
+  header small { color: var(--muted); font-size: 0.75rem; }
+  section { background: var(--card); border: 1px solid var(--border); padding: 28px; margin-bottom: 24px; }
+  section h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--teal); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  section h2::before { content: ''; display: block; width: 3px; height: 14px; background: var(--teal); }
+  pre { font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.7; color: var(--teal); white-space: pre-wrap; word-break: break-word; }
+  p.explanation { color: var(--muted); line-height: 1.7; font-size: 0.9rem; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .tag { background: rgba(0,206,209,0.08); border: 1px solid rgba(0,206,209,0.3); color: var(--teal); padding: 4px 12px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  footer { text-align: center; color: var(--muted); font-size: 0.75rem; padding-top: 24px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<header>
+  <h1>ProRef AI — Refined Prompt</h1>
+  <small>Generated: ${ts}</small>
+</header>
+
+<section>
+  <h2>Refined Prompt</h2>
+  <pre>${promptText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+</section>
+
+<section>
+  <h2>Why It's Better</h2>
+  <p class="explanation">${explanation.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>
+</section>
+
+<section>
+  <h2>Applied Techniques</h2>
+  <div class="tags">
+    ${metaTags.map(t => `<span class="tag">${t.replace(/</g,'&lt;')}</span>`).join('\n    ')}
+  </div>
+</section>
+
+<footer>Exported by ProRef AI v3.0.0 · Personalized Prompt Refiner</footer>
+</body>
+</html>`;
+        }
+
+        // ──────────────────────────────────────────────────────
+        // Copy
+        // ──────────────────────────────────────────────────────
+        async function copyRefinedPrompt() {
+            const out = getRefinedText();
+            if (!out) return;
+            const icon = document.getElementById('copyBtnIcon');
             try {
                 await navigator.clipboard.writeText(out);
                 icon.innerText = 'check';
                 setTimeout(() => icon.innerText = 'content_copy', 2000);
             } catch (e) {
-                // Fallback select selection
-                alert("Text copied to clipboard.");
+                alert('Text copied to clipboard.');
             }
         }
 
-        // Reset workspace layout
+        // ──────────────────────────────────────────────────────
+        // Prompt Chat
+        // ──────────────────────────────────────────────────────
+        function toggleChatPanel() {
+            const panel = document.getElementById('chatPanel');
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) {
+                document.getElementById('chatInput').focus();
+            }
+        }
+
+        function clearChat() {
+            chatHistory = [];
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="text-center text-xs text-code-gray font-code-block py-4">
+                    Ask me to modify the refined prompt — e.g. "Make it shorter" or "Add a constraint about Python 3.11"
+                </div>`;
+        }
+
+        function handleChatKey(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        function appendChatBubble(role, content) {
+            const msgs = document.getElementById('chatMessages');
+            // Remove placeholder
+            const placeholder = msgs.querySelector('.text-center');
+            if (placeholder) placeholder.remove();
+
+            const bubble = document.createElement('div');
+            bubble.className = `p-3 text-sm leading-relaxed font-code-block ${role === 'user' ? 'chat-bubble-user text-primary ml-4' : 'chat-bubble-assistant text-on-surface mr-4'}`;
+
+            if (role === 'user') {
+                bubble.innerHTML = `<span class="text-[10px] uppercase tracking-wider text-primary/60 block mb-1">You</span>${escapeHtml(content)}`;
+            } else {
+                bubble.innerHTML = `<span class="text-[10px] uppercase tracking-wider text-on-surface-variant block mb-1">ProRef</span>${escapeHtml(content)}`;
+            }
+
+            msgs.appendChild(bubble);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        function appendUpdatedPromptBlock(updatedPrompt) {
+            const msgs = document.getElementById('chatMessages');
+            const block = document.createElement('div');
+            block.className = 'border border-primary/40 bg-primary/5 p-3 mr-4';
+            block.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] uppercase tracking-wider text-primary font-status-label">Updated Prompt</span>
+                    <button onclick="applyUpdatedPrompt(this)" data-prompt="${escapeAttr(updatedPrompt)}"
+                        class="text-[10px] font-status-label text-primary hover:text-primary/70 border border-primary/40 px-2 py-0.5 transition-colors">
+                        APPLY
+                    </button>
+                </div>
+                <pre class="font-code-block text-code-block text-primary whitespace-pre-wrap text-xs">${escapeHtml(updatedPrompt)}</pre>`;
+            msgs.appendChild(block);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        function applyUpdatedPrompt(btn) {
+            const newPrompt = btn.getAttribute('data-prompt');
+            document.getElementById('refinedOutputPre').innerText = newPrompt;
+            // Update chat history so subsequent turns see the new version
+            btn.innerText = 'APPLIED ✓';
+            btn.disabled = true;
+        }
+
+        async function sendChatMessage() {
+            const inputEl = document.getElementById('chatInput');
+            const msg = inputEl.value.trim();
+            if (!msg) return;
+
+            const currentPrompt = document.getElementById('refinedOutputPre').innerText;
+            if (!currentPrompt || currentPrompt.startsWith('//')) {
+                alert('Please refine a prompt first before using chat.');
+                return;
+            }
+
+            inputEl.value = '';
+            appendChatBubble('user', msg);
+
+            const sendBtn = document.getElementById('chatSendBtn');
+            const sendIcon = document.getElementById('chatSendIcon');
+            sendBtn.disabled = true;
+            sendIcon.innerText = 'sync';
+            sendIcon.classList.add('animate-spin');
+
+            // Add to history
+            chatHistory.push({ role: 'user', content: msg });
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: activeUserId,
+                        refined_prompt: currentPrompt,
+                        messages: chatHistory.slice(0, -1),  // exclude the message we just added
+                        new_message: msg
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Chat failed.');
+                }
+
+                const data = await res.json();
+                const reply = data.reply;
+                const updatedPrompt = data.updated_prompt;
+
+                chatHistory.push({ role: 'assistant', content: reply });
+
+                if (reply) appendChatBubble('assistant', reply);
+                if (updatedPrompt) appendUpdatedPromptBlock(updatedPrompt);
+
+            } catch (err) {
+                appendChatBubble('assistant', `Error: ${err.message}`);
+                chatHistory.pop(); // remove the failed user message
+            } finally {
+                sendBtn.disabled = false;
+                sendIcon.innerText = 'send';
+                sendIcon.classList.remove('animate-spin');
+            }
+        }
+
+        // ──────────────────────────────────────────────────────
+        // UI Utilities
+        // ──────────────────────────────────────────────────────
+        function updateCharCount() {
+            const txt = document.getElementById('rawPromptTextarea').value;
+            document.getElementById('charCount').innerText = `${txt.length} characters`;
+        }
+
+        function toggleArabicMode(checkbox) {
+            const textarea = document.getElementById('rawPromptTextarea');
+            const label = document.getElementById('inputLabel');
+            if (checkbox.checked) {
+                textarea.dir = 'rtl';
+                textarea.placeholder = 'اكتب هنا باللغة العربية...';
+                label.innerHTML = '<span class="material-symbols-outlined text-sm">terminal</span> Arabic Prompt Input';
+            } else {
+                textarea.dir = 'ltr';
+                textarea.placeholder = 'Paste your unrefined prompt here...';
+                label.innerHTML = '<span class="material-symbols-outlined text-sm">terminal</span> Rough Prompt Input';
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-panel-item').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`panel-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('#sidebarNav button').forEach(btn => {
+                btn.classList.remove('bg-primary/10', 'text-primary', 'border-r-4', 'border-primary');
+                btn.classList.add('text-on-surface-variant', 'hover:text-on-surface', 'hover:bg-surface-container-high');
+                const span = btn.querySelector('.material-symbols-outlined');
+                if (span) span.style.fontVariationSettings = "'FILL' 0";
+            });
+
+            const activeBtn = document.getElementById(`tabBtn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-on-surface-variant', 'hover:text-on-surface', 'hover:bg-surface-container-high');
+                activeBtn.classList.add('bg-primary/10', 'text-primary', 'border-r-4', 'border-primary');
+                const span = activeBtn.querySelector('.material-symbols-outlined');
+                if (span) span.style.fontVariationSettings = "'FILL' 1";
+            }
+
+            if (tabId === 'history') loadHistory();
+        }
+
         function resetWorkspace() {
             document.getElementById('rawPromptTextarea').value = '';
             document.getElementById('refinedOutputPre').innerText = '// Your refined output will appear here after clicking Refine Prompt';
@@ -1046,27 +1370,28 @@
             document.getElementById('metatagsContainer').innerHTML = '<span class="bg-surface-container border border-surface-border text-on-surface-variant px-3 py-1 text-[10px] font-status-label uppercase tracking-tight">no refinement active</span>';
             document.getElementById('feedbackArea').classList.add('hidden');
             document.getElementById('refineErrorMsg').innerText = '';
-
-            // Reset Arabic Mode
-            const arabicCheckbox = document.getElementById('arabicModeCheckbox');
-            if (arabicCheckbox) {
-                arabicCheckbox.checked = false;
-                toggleArabicMode(arabicCheckbox);
-            }
             document.getElementById('translationPanel').classList.add('hidden');
-
+            const arabicCheckbox = document.getElementById('arabicModeCheckbox');
+            if (arabicCheckbox) { arabicCheckbox.checked = false; toggleArabicMode(arabicCheckbox); }
+            clearChat();
+            document.getElementById('chatPanel').classList.add('hidden');
             updateCharCount();
+            currentRefinementId = null;
         }
 
-        // Log out handler
         function handleLogout() {
             activeUserId = null;
             activeDomain = null;
             activeTags = [];
+            activeTools = [];
+            activeAvoid = [];
             currentRefinementId = null;
+            storedProfile = {};
+            chatHistory = [];
 
             localStorage.removeItem('proref_user_id');
             localStorage.removeItem('proref_domain');
+            localStorage.removeItem('proref_profile');
 
             document.getElementById('userIdInput').value = '';
             document.getElementById('bioInput').value = '';
@@ -1078,16 +1403,19 @@
 
             document.getElementById('workspaceView').classList.add('hidden');
             document.getElementById('onboardingView').classList.remove('hidden');
+            document.getElementById('settingsDrawer').classList.remove('open');
+            document.getElementById('settingsDrawer').classList.add('closed');
 
             const submitBtn = document.getElementById('onboardSubmitBtn');
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Initialize Refiner <span class="material-symbols-outlined">rocket_launch</span>';
         }
 
-        // Submit Rating Feedback loop
+        // ──────────────────────────────────────────────────────
+        // Feedback
+        // ──────────────────────────────────────────────────────
         async function submitFeedback(rating) {
             if (!currentRefinementId || !activeUserId) return;
-
             const goodBtn = document.getElementById('feedbackGoodBtn');
             const badBtn = document.getElementById('feedbackBadBtn');
             const statusEl = document.getElementById('feedbackStatusText');
@@ -1100,25 +1428,13 @@
                 const res = await fetch('/feedback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        refinement_id: currentRefinementId,
-                        user_id: activeUserId,
-                        rating: rating
-                    })
+                    body: JSON.stringify({ refinement_id: currentRefinementId, user_id: activeUserId, rating })
                 });
-
-                if (!res.ok) throw new Error('Feedback transmission failed.');
-
+                if (!res.ok) throw new Error('Feedback failed.');
                 const data = await res.json();
-                statusEl.innerText = data.promoted_to_kb ? 'RAG Promoted' : 'Rating log ready';
-
-                // styling updates
-                if (rating === 'good') {
-                    goodBtn.classList.add('border-success-teal', 'text-success-teal', 'bg-success-teal/10');
-                } else {
-                    badBtn.classList.add('border-error', 'text-error', 'bg-error/10');
-                }
-
+                statusEl.innerText = data.promoted_to_kb ? 'RAG Promoted' : 'Rating logged';
+                if (rating === 'good') goodBtn.classList.add('border-success-teal', 'text-success-teal', 'bg-success-teal/10');
+                else badBtn.classList.add('border-error', 'text-error', 'bg-error/10');
             } catch (err) {
                 statusEl.innerText = 'Error logging feedback';
                 goodBtn.disabled = false;
@@ -1129,21 +1445,19 @@
         function resetFeedbackButtons() {
             const goodBtn = document.getElementById('feedbackGoodBtn');
             const badBtn = document.getElementById('feedbackBadBtn');
-            const statusEl = document.getElementById('feedbackStatusText');
-
+            document.getElementById('feedbackStatusText').innerText = '';
             goodBtn.disabled = false;
             badBtn.disabled = false;
-            statusEl.innerText = '';
-
             goodBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 border border-surface-border bg-surface-container hover:border-success-teal/50 hover:text-success-teal transition-all';
             badBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 border border-surface-border bg-surface-container hover:border-error/50 hover:text-error transition-all';
         }
 
-        // Load History Entries list
+        // ──────────────────────────────────────────────────────
+        // History
+        // ──────────────────────────────────────────────────────
         async function loadHistory() {
             const entriesList = document.getElementById('historyEntriesList');
             const counter = document.getElementById('historyCounter');
-
             if (!activeUserId) return;
 
             entriesList.innerHTML = '<div class="text-center py-10 font-code-block text-sm text-code-gray">Reading local logs...</div>';
@@ -1151,58 +1465,52 @@
             try {
                 const res = await fetch(`/history/${encodeURIComponent(activeUserId)}?limit=25`);
                 if (!res.ok) throw new Error('History retrieval failed.');
-
                 const data = await res.json();
                 counter.innerText = `${data.total} entries`;
 
                 if (data.entries.length === 0) {
-                    entriesList.innerHTML = `
-                        <div class="text-center py-12 border border-dashed border-surface-border bg-surface-container-low">
-                            <span class="material-symbols-outlined text-4xl text-code-gray mb-3">inbox</span>
-                            <p class="text-sm font-code-block text-code-gray">Workspace has no refinement entries recorded.</p>
-                        </div>
-                    `;
+                    entriesList.innerHTML = `<div class="text-center py-12 border border-dashed border-surface-border bg-surface-container-low">
+                        <span class="material-symbols-outlined text-4xl text-code-gray mb-3">inbox</span>
+                        <p class="text-sm font-code-block text-code-gray">No refinement entries recorded yet.</p>
+                    </div>`;
                     return;
                 }
 
                 entriesList.innerHTML = data.entries.map(entry => {
                     const ratingColor = entry.rating === 'good' ? 'text-success-teal' : entry.rating === 'bad' ? 'text-error' : 'text-code-gray';
                     const ratingText = entry.rating === 'good' ? 'Useful' : entry.rating === 'bad' ? 'Unusable' : 'Not Rated';
+                    const cleanDate = new Date(entry.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-                    const cleanDate = new Date(entry.timestamp).toLocaleString(undefined, {
-                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                    });
-
-                    return `
-                        <div class="bg-surface-container-low border border-surface-border p-6 flex flex-col gap-4">
-                            <div class="flex items-center justify-between border-b border-surface-border pb-3 flex-wrap gap-2">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-xs font-status-label ${ratingColor} uppercase border border-current px-2 py-0.5">${ratingText}</span>
-                                    <span class="text-xs font-status-label text-primary uppercase bg-primary/10 border border-primary/20 px-2.5 py-0.5">${entry.technique_used}</span>
-                                </div>
-                                <span class="text-xs font-code-block text-code-gray">${cleanDate}</span>
+                    return `<div class="bg-surface-container-low border border-surface-border p-6 flex flex-col gap-4">
+                        <div class="flex items-center justify-between border-b border-surface-border pb-3 flex-wrap gap-2">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-status-label ${ratingColor} uppercase border border-current px-2 py-0.5">${ratingText}</span>
+                                <span class="text-xs font-status-label text-primary uppercase bg-primary/10 border border-primary/20 px-2.5 py-0.5">${entry.technique_used}</span>
                             </div>
-                            <div class="text-sm text-on-surface-variant">
-                                <span class="text-xs text-primary font-status-label block uppercase mb-1">Original Prompt</span>
-                                <p class="font-body-base leading-relaxed text-on-background bg-terminal-bg/30 p-3 border border-surface-border/50">${escapeHtml(entry.raw_prompt)}</p>
-                            </div>
-                            <div class="text-sm">
-                                <span class="text-xs text-primary font-status-label block uppercase mb-1">Refined Output</span>
-                                <pre class="font-code-block text-xs bg-terminal-bg p-4 border border-surface-border text-primary whitespace-pre-wrap leading-relaxed">${escapeHtml(entry.refined_prompt)}</pre>
-                            </div>
-                            <div class="flex items-center gap-3 pt-1">
-                                <span class="text-xs font-status-label text-code-gray">Domain context applied:</span>
-                                <span class="text-xs font-status-label text-on-surface-variant border border-surface-border px-2 py-0.5">${entry.domain_tip_used}</span>
-                            </div>
+                            <span class="text-xs font-code-block text-code-gray">${cleanDate}</span>
                         </div>
-                    `;
+                        <div class="text-sm text-on-surface-variant">
+                            <span class="text-xs text-primary font-status-label block uppercase mb-1">Original Prompt</span>
+                            <p class="font-body-base leading-relaxed text-on-background bg-terminal-bg/30 p-3 border border-surface-border/50">${escapeHtml(entry.raw_prompt)}</p>
+                        </div>
+                        <div class="text-sm">
+                            <span class="text-xs text-primary font-status-label block uppercase mb-1">Refined Output</span>
+                            <pre class="font-code-block text-xs bg-terminal-bg p-4 border border-surface-border text-primary whitespace-pre-wrap leading-relaxed">${escapeHtml(entry.refined_prompt)}</pre>
+                        </div>
+                        <div class="flex items-center gap-3 pt-1">
+                            <span class="text-xs font-status-label text-code-gray">Domain context:</span>
+                            <span class="text-xs font-status-label text-on-surface-variant border border-surface-border px-2 py-0.5">${entry.domain_tip_used}</span>
+                        </div>
+                    </div>`;
                 }).join('');
-
             } catch (err) {
-                entriesList.innerHTML = `<div class="text-center py-10 font-code-block text-sm text-error">Failed to load history entries: ${err.message}</div>`;
+                entriesList.innerHTML = `<div class="text-center py-10 font-code-block text-sm text-error">Failed to load history: ${err.message}</div>`;
             }
         }
 
+        // ──────────────────────────────────────────────────────
+        // Helpers
+        // ──────────────────────────────────────────────────────
         function escapeHtml(str) {
             return String(str)
                 .replace(/&/g, '&amp;')
@@ -1210,7 +1518,13 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;');
         }
+
+        function escapeAttr(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
     </script>
 </body>
-
 </html>
