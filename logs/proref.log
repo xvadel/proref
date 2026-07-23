@@ -12,3 +12,21 @@
 2026-07-23T04:19:54 | INFO     | app.feedback | Updated success_rate for 2 techniques in ChromaDB.
 2026-07-23T04:19:54 | INFO     | app.rag | Knowledge base ingestion complete.
 2026-07-23T04:19:54 | INFO     | app.main | Server ready — all systems operational.
+2026-07-23T04:21:20 | INFO     | root | Logging initialised | level=INFO | file=D:\PROJECTS\proref\logs\proref.log
+2026-07-23T04:21:25 | WARNING  | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-07-23T04:21:30 | INFO     | app.main | Starting Personalized Prompt Refiner...
+2026-07-23T04:21:30 | INFO     | app.rag | Ingesting knowledge base into ChromaDB...
+2026-07-23T04:21:30 | INFO     | app.rag | Ingested 9 prompt techniques.
+2026-07-23T04:21:31 | INFO     | app.rag | Ingested 18 domain knowledge entries.
+2026-07-23T04:21:31 | INFO     | app.feedback | Updated success_rate for 2 techniques in ChromaDB.
+2026-07-23T04:21:31 | INFO     | app.rag | Knowledge base ingestion complete.
+2026-07-23T04:21:31 | INFO     | app.main | Server ready — all systems operational.
+2026-07-23T04:22:24 | INFO     | app.main | Onboarding user | user_id=mohamed | domain=creative_writing
+2026-07-23T04:22:24 | INFO     | app.rag | User profile stored | user_id=mohamed | domain=creative_writing
+2026-07-23T04:23:15 | INFO     | app.main | POST /refine | user_id=mohamed | prompt_chars=72
+2026-07-23T04:23:15 | INFO     | app.llm | refine_prompt | user=mohamed | domain=creative_writing | prompt_chars=72
+2026-07-23T04:23:15 | INFO     | app.hf_pipeline | Loading HuggingFace pipeline: task=text-generation model=gpt2
+2026-07-23T04:26:28 | INFO     | app.hf_pipeline | Pipeline loaded successfully: text-generation/gpt2
+2026-07-23T04:26:31 | INFO     | app.llm | GroqClient initialised | model=llama-3.1-8b-instant
+2026-07-23T04:26:33 | INFO     | app.llm | Refinement complete | refined_chars=1803 | explanation_chars=340
+2026-07-23T04:26:33 | INFO     | app.feedback | Refinement logged | refinement_id=697ac7e9 | user=mohamed | source=refine
