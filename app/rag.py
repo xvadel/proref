@@ -14,11 +14,15 @@ so no external API key is needed for the vector search layer.
 """
 
 import json
-import os
 from pathlib import Path
 
 import chromadb
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+
+from app.config import settings
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # ──────────────────────────────────────────────────────────────
 # Configuration
@@ -29,16 +33,17 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _DATA_DIR = _PROJECT_ROOT / "data"
 _PROFILES_DIR = _PROJECT_ROOT / "user_profiles"
 
-# ChromaDB storage path (configurable via .env)
-_CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", str(_PROJECT_ROOT / "chroma_db"))
-
 # Shared embedding function — downloaded automatically on first use (~80 MB)
 embedding_fn = SentenceTransformerEmbeddingFunction(
     model_name="all-MiniLM-L6-v2"
 )
 
 # Persistent ChromaDB client (data survives server restarts)
-chroma_client = chromadb.PersistentClient(path=_CHROMA_DB_PATH)
+# Path is now driven by settings.chroma_db_path
+chroma_client = chromadb.PersistentClient(
+    path=str(settings.chroma_db_resolved)
+)
+logger.debug("ChromaDB client initialised | path=%s", settings.chroma_db_resolved)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -65,18 +70,22 @@ def ingest_knowledge_base() -> None:
     without a manual ingestion step. Upserts are idempotent (safe to re-run).
     After ingestion, applies any existing feedback-derived success rates.
     """
+    logger.info("Ingesting knowledge base into ChromaDB...")
     _ingest_prompt_techniques()
     _ingest_domain_knowledge()
 
     # Apply existing feedback success rates to the freshly ingested techniques
-    # (import here to avoid circular import at module level)
     try:
         from app.feedback import update_chroma_success_rates
         update_chroma_success_rates()
-    except Exception:
-        pass  # No feedback yet — not an error
+    except Exception as exc:
+        logger.warning(
+            "Could not apply feedback success rates on startup: %s "
+            "(normal on first run — no feedback yet).",
+            exc,
+        )
 
-    print("[+] Knowledge base ingested into ChromaDB.")
+    logger.info("Knowledge base ingestion complete.")
 
 
 def _ingest_prompt_techniques() -> None:
@@ -87,9 +96,8 @@ def _ingest_prompt_techniques() -> None:
     with open(filepath, "r", encoding="utf-8") as f:
         techniques = json.load(f)
 
-    # FIX: Read existing success_rates from ChromaDB before upserting.
-    # Without this, every server restart would reset learned weights to 0.5,
-    # wiping out feedback-derived improvements.
+    # Preserve learned success_rates: read existing metadata before upserting
+    # so that a server restart does not reset feedback-derived weights to 0.5.
     existing_ids = [tech["id"] for tech in techniques]
     existing_data = collection.get(ids=existing_ids, include=["metadatas"])
     existing_rates: dict[str, float] = {}
@@ -98,11 +106,9 @@ def _ingest_prompt_techniques() -> None:
             if meta and "title" in meta:
                 existing_rates[meta["title"]] = meta.get("success_rate", 0.5)
 
-    # Build a rich text document for each technique to embed
     ids, documents, metadatas = [], [], []
     for tech in techniques:
         ids.append(tech["id"])
-        # Combine title + when_to_use + technique for richer semantic search
         documents.append(
             f"{tech['title']}: {tech['when_to_use']} {tech['technique']}"
         )
@@ -112,14 +118,11 @@ def _ingest_prompt_techniques() -> None:
             "when_to_use": tech["when_to_use"],
             "example_before": tech["example_before"],
             "example_after": tech["example_after"],
-            # Preserve learned success_rate; default 0.5 only for genuinely new techniques
             "success_rate": existing_rates.get(tech["title"], 0.5),
         })
 
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
-    print(f"  [i] Ingested {len(ids)} prompt techniques.")
-
-
+    logger.info("Ingested %d prompt techniques.", len(ids))
 
 
 def _ingest_domain_knowledge() -> None:
@@ -142,7 +145,7 @@ def _ingest_domain_knowledge() -> None:
             })
 
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
-    print(f"  [i] Ingested {len(ids)} domain knowledge entries.")
+    logger.info("Ingested %d domain knowledge entries.", len(ids))
 
 
 # ──────────────────────────────────────────────────────────────
@@ -159,15 +162,12 @@ def store_user_profile(profile: dict) -> None:
                  tone_preference, goal, tools, output_format_preference,
                  avoid_topics).
     """
-    # Ensure the profiles directory exists
     _PROFILES_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Save to disk as JSON
     filepath = _PROFILES_DIR / f"{profile['user_id']}.json"
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(profile, f, indent=2, ensure_ascii=False)
 
-    # Embed in ChromaDB for potential future semantic retrieval
     collection = _get_collection("user_profiles")
     doc_text = _profile_to_text(profile)
     collection.upsert(
@@ -176,10 +176,14 @@ def store_user_profile(profile: dict) -> None:
         metadatas=[{
             "user_id": profile["user_id"],
             "domain": profile["domain"],
-            # Store key enum fields for potential future filtering
             "experience_level": profile.get("experience_level", "intermediate"),
             "tone_preference": profile.get("tone_preference", "balanced"),
         }],
+    )
+    logger.info(
+        "User profile stored | user_id=%s | domain=%s",
+        profile["user_id"],
+        profile["domain"],
     )
 
 
@@ -192,13 +196,15 @@ def load_user_profile(user_id: str) -> dict | None:
     """
     filepath = _PROFILES_DIR / f"{user_id}.json"
     if not filepath.exists():
+        logger.debug("Profile not found on disk | user_id=%s", user_id)
         return None
     with open(filepath, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def _profile_to_text(profile: dict) -> str:
-    """Convert a profile dict to a searchable text document.
+    """
+    Convert a profile dict to a searchable text document.
 
     Includes all v2.1 extended fields so the ChromaDB embedding captures
     the full semantic richness of the user's context.
@@ -231,18 +237,15 @@ def retrieve_technique(raw_prompt: str, n_candidates: int = 3) -> dict:
     Find the most relevant prompt-engineering technique for the given raw prompt.
 
     Strategy (feedback-aware reranking):
-      1. Retrieve the top `n_candidates` by embedding similarity.
-      2. Among candidates whose similarity scores are within a 10% relative
-         margin of the best score, pick the one with the highest success_rate.
-      3. This means: when two techniques are roughly equally relevant, the one
-         that has historically worked better for users wins.
+      1. Retrieve the top ``n_candidates`` by embedding similarity.
+      2. Among candidates whose scores are within 10% of the best, pick the
+         one with the highest success_rate from user feedback.
 
     Returns:
         Dict with keys: title, technique, when_to_use, example_before, example_after,
                         success_rate.
     """
     collection = _get_collection("prompt_techniques")
-    # Fetch n_candidates so we have room to rerank
     results = collection.query(
         query_texts=[raw_prompt],
         n_results=min(n_candidates, collection.count() or 1),
@@ -250,16 +253,12 @@ def retrieve_technique(raw_prompt: str, n_candidates: int = 3) -> dict:
     )
 
     if not results["metadatas"] or not results["metadatas"][0]:
+        logger.warning("No techniques found in ChromaDB — returning fallback.")
         return _fallback_technique()
 
-    candidates = list(zip(
-        results["metadatas"][0],
-        results["distances"][0],
-    ))
+    candidates = list(zip(results["metadatas"][0], results["distances"][0]))
 
-    # Rerank: among candidates within 10% of the best (lowest) distance,
-    # prefer the one with the highest success_rate from user feedback.
-    best_distance = candidates[0][1]  # ChromaDB returns sorted ascending
+    best_distance = candidates[0][1]
     margin = best_distance * 0.10
 
     close_candidates = [
@@ -267,28 +266,31 @@ def retrieve_technique(raw_prompt: str, n_candidates: int = 3) -> dict:
         if dist <= best_distance + margin
     ]
 
-    # Sort close candidates by success_rate descending, then by distance ascending
     close_candidates.sort(
         key=lambda x: (-x[0].get("success_rate", 0.5), x[1])
     )
 
-    return close_candidates[0][0]
+    chosen = close_candidates[0][0]
+    logger.debug(
+        "Technique selected: '%s' | success_rate=%.3f",
+        chosen.get("title", "?"),
+        chosen.get("success_rate", 0.5),
+    )
+    return chosen
 
 
 def retrieve_domain_tip(raw_prompt: str, domain: str) -> dict:
     """
     Find the most relevant domain-specific best practice.
 
-    Filters by domain using ChromaDB's `where` clause to ensure the tip
-    matches the user's working domain. Also searches promoted validated
-    examples (domain="general") which are domain-agnostic.
+    Filters by domain using ChromaDB's ``where`` clause. Also searches
+    promoted validated examples tagged to this domain.
 
     Returns:
         Dict with keys: title, domain, guidance.
     """
     collection = _get_collection("domain_knowledge")
 
-    # Primary: domain-specific tips
     results = collection.query(
         query_texts=[raw_prompt],
         n_results=1,
@@ -296,9 +298,13 @@ def retrieve_domain_tip(raw_prompt: str, domain: str) -> dict:
     )
 
     if results["metadatas"] and results["metadatas"][0]:
-        return results["metadatas"][0][0]
+        tip = results["metadatas"][0][0]
+        logger.debug("Domain tip selected: '%s' | domain=%s", tip.get("title", "?"), domain)
+        return tip
 
-    # Fallback: return generic advice
+    logger.warning(
+        "No domain tip found for domain='%s' — returning generic fallback.", domain
+    )
     return {
         "title": "General Best Practice",
         "domain": domain,

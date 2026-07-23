@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────────────────────
-# PROREF — Python Dependencies
+# PROREF v3.0 — Python Dependencies
 # ──────────────────────────────────────────────────────────────
 # Install: pip install -r requirements.txt
 # ──────────────────────────────────────────────────────────────
@@ -11,11 +11,12 @@ uvicorn[standard]>=0.29.0
 # Vector database (local, persistent, no external server)
 chromadb>=0.5.0
 
-# Local embeddings (all-MiniLM-L6-v2, ~80MB download on first run)
+# Local embeddings (all-MiniLM-L6-v2, ~80 MB download on first run)
 sentence-transformers>=2.7.0
 
-# Data validation
+# Data validation + environment config
 pydantic>=2.7.0
+pydantic-settings>=2.2.0
 
 # Environment variable loading
 python-dotenv>=1.0.0
@@ -25,3 +26,15 @@ groq>=0.9.0
 
 # HTTP client (for Ollama REST API fallback)
 requests>=2.31.0
+
+# Retry / exponential back-off for LLM API calls
+tenacity>=8.2.0
+
+# HuggingFace specialist pipelines (Arabic translation, domain signal extraction)
+# Models are lazy-loaded on first use — no download until the domain is used.
+transformers>=4.40.0
+torch>=2.0.0          # CPU-only is fine; install torch with CUDA separately if needed
+sentencepiece>=0.1.99  # Required by Helsinki-NLP MarianMT tokenizer
+
+# Optional: colored console logging (graceful fallback to plain if not installed)
+colorlog>=6.8.0

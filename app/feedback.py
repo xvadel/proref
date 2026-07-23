@@ -19,9 +19,13 @@ reaching this module, so _safe_user_id() is a defense-in-depth fallback only.
 import json
 import re
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from collections import defaultdict
+
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # ──────────────────────────────────────────────────────────────
 # Paths
@@ -64,13 +68,19 @@ def log_refinement(
         "refined_prompt": refined_prompt,
         "technique_used": technique_used,
         "domain_tip_used": domain_tip_used,
-        "domain": domain,                       # FIX: store actual domain for promotion
+        "domain": domain,
         "source": source,
-        "rating": None,          # populated later via POST /feedback
+        "rating": None,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     _append_record(user_id, record)
+    logger.info(
+        "Refinement logged | refinement_id=%s | user=%s | source=%s",
+        refinement_id[:8],
+        user_id,
+        source,
+    )
     return refinement_id
 
 
@@ -88,6 +98,9 @@ def record_feedback(refinement_id: str, user_id: str, rating: str) -> bool:
     """
     log_path = _log_path(user_id)
     if not log_path.exists():
+        logger.warning(
+            "record_feedback: no log file found | user_id=%s", user_id
+        )
         return False
 
     records = _read_records(user_id)
@@ -102,6 +115,18 @@ def record_feedback(refinement_id: str, user_id: str, rating: str) -> bool:
         with open(log_path, "w", encoding="utf-8") as f:
             for rec in records:
                 f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        logger.info(
+            "Feedback recorded | refinement_id=%s | rating=%s | user=%s",
+            refinement_id[:8],
+            rating,
+            user_id,
+        )
+    else:
+        logger.warning(
+            "record_feedback: refinement_id not found | id=%s | user=%s",
+            refinement_id[:8],
+            user_id,
+        )
 
     return updated
 
@@ -115,7 +140,11 @@ def get_user_history(user_id: str, limit: int = 20) -> list[dict]:
         limit:   Maximum number of records to return.
     """
     records = _read_records(user_id)
-    return list(reversed(records))[:limit]
+    history = list(reversed(records))[:limit]
+    logger.debug(
+        "get_user_history | user=%s | records_returned=%d", user_id, len(history)
+    )
+    return history
 
 
 # ──────────────────────────────────────────────────────────────
@@ -141,7 +170,8 @@ def compute_technique_success_rates() -> dict[str, float]:
                 continue
             try:
                 rec = json.loads(line)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as exc:
+                logger.warning("Skipping malformed JSONL line in %s: %s", log_file.name, exc)
                 continue
 
             technique = rec.get("technique_used", "")
@@ -158,6 +188,7 @@ def compute_technique_success_rates() -> dict[str, float]:
     for technique, total in total_counts.items():
         rates[technique] = round(good_counts[technique] / total, 3)
 
+    logger.debug("Computed success rates for %d techniques.", len(rates))
     return rates
 
 
@@ -176,12 +207,14 @@ def update_chroma_success_rates() -> None:
 
     rates = compute_technique_success_rates()
     if not rates:
+        logger.debug("update_chroma_success_rates: no rated techniques yet — skipping.")
         return
 
     collection = _get_collection("prompt_techniques")
     existing = collection.get(include=["metadatas", "documents"])
 
     if not existing["ids"]:
+        logger.warning("update_chroma_success_rates: prompt_techniques collection is empty.")
         return
 
     ids, documents, metadatas = [], [], []
@@ -194,7 +227,7 @@ def update_chroma_success_rates() -> None:
         metadatas.append(meta)
 
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
-    print(f"[+] Updated success_rate for {len(rates)} techniques in ChromaDB.")
+    logger.info("Updated success_rate for %d techniques in ChromaDB.", len(rates))
 
 
 # ──────────────────────────────────────────────────────────────
@@ -204,7 +237,7 @@ def update_chroma_success_rates() -> None:
 def maybe_promote_to_kb(record: dict) -> bool:
     """
     If a refinement gets a "good" rating, promote the
-    (raw_prompt -> refined_prompt) pair into the KB as a new few-shot example.
+    (raw_prompt → refined_prompt) pair into the KB as a new few-shot example.
 
     Promotion criteria:
       - rating == "good"
@@ -212,9 +245,8 @@ def maybe_promote_to_kb(record: dict) -> bool:
       - refined_prompt is at least 30 chars
       - The pair hasn't already been promoted (idempotent via doc_id check)
 
-    FIX: Uses record["domain"] (the user's actual domain) instead of always
-    tagging as "general" — this ensures promoted examples are retrievable
-    by the correct domain filter in retrieve_domain_tip().
+    Uses record["domain"] (the user's actual domain) so promoted examples
+    are retrievable by the correct domain filter in retrieve_domain_tip().
 
     Returns:
         True if the record was promoted, False otherwise.
@@ -227,6 +259,11 @@ def maybe_promote_to_kb(record: dict) -> bool:
     raw = record.get("raw_prompt", "")
     refined = record.get("refined_prompt", "")
     if len(raw) < 10 or len(refined) < 30:
+        logger.debug(
+            "Skipping KB promotion: too short | raw=%d chars | refined=%d chars",
+            len(raw),
+            len(refined),
+        )
         return False
 
     doc_id = f"promoted_{record['refinement_id']}"
@@ -234,9 +271,9 @@ def maybe_promote_to_kb(record: dict) -> bool:
 
     existing = collection.get(ids=[doc_id])
     if existing["ids"]:
-        return False  # already promoted — idempotent
+        logger.debug("KB promotion skipped: already exists | doc_id=%s", doc_id)
+        return False
 
-    # FIX: use the actual user domain, not hardcoded "general"
     domain = record.get("domain", "general")
 
     doc_text = (
@@ -263,12 +300,14 @@ def maybe_promote_to_kb(record: dict) -> bool:
     with open(promoted_log, "a", encoding="utf-8") as f:
         f.write(json.dumps({**record, "chroma_id": doc_id}, ensure_ascii=False) + "\n")
 
-    print(f"[+] Promoted refinement {record['refinement_id'][:8]}... to domain '{domain}' KB.")
+    logger.info(
+        "Promoted refinement %s to domain='%s' KB.", record["refinement_id"][:8], domain
+    )
     return True
 
 
 # ──────────────────────────────────────────────────────────────
-# User Prompt History (for adaptive personalization)
+# User Prompt History (adaptive personalisation)
 # ──────────────────────────────────────────────────────────────
 
 def embed_user_prompt_history(user_id: str, raw_prompt: str, domain: str) -> None:
@@ -287,6 +326,7 @@ def embed_user_prompt_history(user_id: str, raw_prompt: str, domain: str) -> Non
         documents=[raw_prompt],
         metadatas=[{"user_id": user_id, "domain": domain}],
     )
+    logger.debug("Embedded prompt history | user=%s | doc_id=%s", user_id, doc_id)
 
 
 def retrieve_similar_user_prompts(user_id: str, raw_prompt: str, n: int = 3) -> list[str]:
@@ -304,6 +344,7 @@ def retrieve_similar_user_prompts(user_id: str, raw_prompt: str, n: int = 3) -> 
 
     existing = collection.get(where={"user_id": user_id})
     if not existing["ids"]:
+        logger.debug("No prompt history found for user=%s.", user_id)
         return []
 
     results = collection.query(
@@ -313,13 +354,17 @@ def retrieve_similar_user_prompts(user_id: str, raw_prompt: str, n: int = 3) -> 
     )
 
     if results["documents"] and results["documents"][0]:
-        return [d for d in results["documents"][0] if d.strip() != raw_prompt.strip()]
+        similar = [d for d in results["documents"][0] if d.strip() != raw_prompt.strip()]
+        logger.debug(
+            "Retrieved %d similar past prompts for user=%s.", len(similar), user_id
+        )
+        return similar
 
     return []
 
 
 # ──────────────────────────────────────────────────────────────
-# Internal helpers
+# Internal Helpers
 # ──────────────────────────────────────────────────────────────
 
 def _safe_user_id(user_id: str) -> str:
@@ -351,6 +396,8 @@ def _read_records(user_id: str) -> list[dict]:
         if line.strip():
             try:
                 records.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
+            except json.JSONDecodeError as exc:
+                logger.warning(
+                    "Skipping malformed JSONL record for user=%s: %s", user_id, exc
+                )
     return records

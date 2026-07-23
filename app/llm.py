@@ -5,58 +5,118 @@ Provider is selected via the LLM_PROVIDER environment variable:
   - "groq"   → Uses the Groq Python SDK (free tier, needs GROQ_API_KEY)
   - "ollama" → Calls Ollama's local REST API (no API key, needs Ollama running)
 
-The main entry point is `refine_prompt()`, which:
-  1. Builds a system prompt instructing the LLM to rewrite the user's raw prompt
-  2. Injects the user's similar past prompts for deeper personalization
-  3. Sends it to the configured LLM provider
-  4. Parses the structured response into (refined_prompt, explanation)
+Key improvements over previous version:
+  - All model settings (temperature, max_tokens, timeout) come from app.config.Settings
+  - Prompt templates are imported from app.prompts — no strings live here
+  - Tenacity-based retry with exponential back-off for transient API errors
+  - HuggingFace specialist pipeline used as primary Arabic translator (LLM fallback)
+  - Structured logging replaces all print() statements
+
+The main entry points are:
+  - refine_prompt()           → standard English pipeline
+  - translate_prompt_to_english() → Arabic → English (HF primary, LLM fallback)
+  - translate_and_refine()    → Arabic pipeline (translate + refine)
 """
 
-import os
+import requests
 from abc import ABC, abstractmethod
 
-import requests
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+    before_sleep_log,
+)
+import logging
+
+from app.config import settings
+from app.logging_config import get_logger
+from app.prompts import (
+    REFINE_TEMPLATE,
+    TRANSLATE_TEMPLATE,
+    ARABIC_REFINE_TEMPLATE,
+    build_template_kwargs,
+)
+
+logger = get_logger(__name__)
+
 
 # ──────────────────────────────────────────────────────────────
-# System Prompt Template
+# Retry Decorator Factory
 # ──────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are an expert prompt engineer. Your job is to take a user's rough, vague prompt and rewrite it into a highly effective, specific prompt.
+def _make_retry_decorator():
+    """
+    Build a tenacity retry decorator using settings from app.config.
 
-You have been given:
-1. A PROMPT-ENGINEERING TECHNIQUE to apply
-2. A DOMAIN-SPECIFIC BEST PRACTICE relevant to the user's field
-3. The USER'S FULL PROFILE — including their domain, experience level, tone preference, goal, tools, and topics to avoid
-4. Optionally, SIMILAR PAST PROMPTS from this user — showing their typical writing patterns
+    Retries on:
+      - requests.Timeout          (Ollama connection timeout)
+      - requests.ConnectionError  (Ollama server not reachable)
+      - ConnectionError           (generic network errors)
 
-RULES:
-- Rewrite the prompt using the technique and domain tip provided.
-- Calibrate vocabulary and depth to the user's EXPERIENCE LEVEL:
-    beginner  → use plain language, avoid jargon, briefly explain concepts
-    intermediate → assume working knowledge, moderate technical depth
-    expert    → use precise technical terminology, skip basics, be concise
-- Apply the user's TONE PREFERENCE:
-    formal   → professional, structured, no contractions
-    balanced → clear and approachable, natural professional voice
-    casual   → direct, conversational, first-person OK
-- Prefer the user's OUTPUT FORMAT PREFERENCE in the prompt you write:
-    paragraph → flowing prose instructions
-    bullets   → concise bullet points
-    structured → use headers/sections
-    code      → code-first output, minimal prose
-- If the user specified TOOLS, reference relevant ones naturally — do not force them.
-- If the user stated a GOAL, ensure the refined prompt serves that larger purpose.
-- If AVOID TOPICS are listed, treat them as hard negative constraints — do not mention them.
-- If similar past prompts are provided, note any recurring weaknesses (e.g. missing audience, no constraints) and proactively fix them.
-- The refined prompt should be significantly more specific, actionable, and effective than the original.
-- Do NOT just add generic filler — every addition should serve a clear purpose.
-- If PREFERRED LANGUAGE is not English, write the refined prompt in that language.
+    Groq-specific rate limit / API errors are also caught via broad Exception
+    in the inner try/except and re-raised after exhausting retries.
+    """
+    return retry(
+        stop=stop_after_attempt(settings.llm_max_retries),
+        wait=wait_exponential(
+            multiplier=settings.llm_retry_min_wait,
+            max=settings.llm_retry_max_wait,
+        ),
+        retry=retry_if_exception_type(
+            (requests.Timeout, requests.ConnectionError, ConnectionError)
+        ),
+        reraise=True,
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
 
-OUTPUT FORMAT (you MUST follow this exactly):
-REFINED PROMPT: <your rewritten prompt here — just the prompt text, no quotes>
-WHY: <1-2 sentences explaining what specific changes you made and why they improve the prompt>
 
-Do NOT include any other text, headers, or commentary outside this format."""
+_retry = _make_retry_decorator()
+
+
+# ──────────────────────────────────────────────────────────────
+# Response Parser
+# ──────────────────────────────────────────────────────────────
+
+def parse_llm_response(text: str) -> tuple[str, str]:
+    """
+    Parse the LLM's structured response into (refined_prompt, explanation).
+
+    Expected format:
+        REFINED PROMPT: <prompt text>
+        WHY: <explanation text>
+
+    Falls back gracefully if the LLM doesn't follow the format exactly.
+
+    Args:
+        text: Raw LLM response string.
+
+    Returns:
+        Tuple of (refined_prompt, explanation).
+    """
+    refined_prompt = ""
+    explanation = ""
+
+    text = text.strip()
+
+    if "REFINED PROMPT:" in text and "WHY:" in text:
+        parts = text.split("WHY:", 1)
+        refined_prompt = parts[0].replace("REFINED PROMPT:", "").strip()
+        explanation = parts[1].strip()
+    elif "REFINED PROMPT:" in text:
+        refined_prompt = text.split("REFINED PROMPT:", 1)[1].strip()
+        explanation = "The prompt was refined using best practices for clarity and specificity."
+        logger.debug("LLM response missing WHY section — using default explanation.")
+    else:
+        refined_prompt = text
+        explanation = "The prompt was refined using best practices for clarity and specificity."
+        logger.warning(
+            "LLM response did not follow the expected format — "
+            "returning full text as refined prompt."
+        )
+
+    return refined_prompt, explanation
 
 
 # ──────────────────────────────────────────────────────────────
@@ -73,65 +133,89 @@ class LLMClient(ABC):
 
 
 # ──────────────────────────────────────────────────────────────
-# Groq Client (default, free tier)
+# Groq Client
 # ──────────────────────────────────────────────────────────────
 
 class GroqClient(LLMClient):
     """LLM client using the Groq Python SDK."""
 
-    def __init__(self):
-        from groq import Groq  # Lazy import to avoid errors if not installed
+    def __init__(self) -> None:
+        from groq import Groq  # lazy import
 
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key or api_key == "your_groq_api_key_here":
+        if not settings.groq_api_key_is_set:
             raise ValueError(
-                "GROQ_API_KEY is not set. Get a free key at https://console.groq.com "
-                "and add it to your .env file."
+                "GROQ_API_KEY is not set or is still the placeholder value. "
+                "Get a free key at https://console.groq.com and add it to your .env file."
             )
-        self.client = Groq(api_key=api_key)
-        self.model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+        self._client = Groq(api_key=settings.groq_api_key)
+        self._model = settings.groq_model
+        logger.info("GroqClient initialised | model=%s", self._model)
 
+    @_retry
     def chat(self, system_prompt: str, user_prompt: str) -> str:
-        """Send a chat completion request via the Groq SDK."""
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.7,
-            max_tokens=1024,
-        )
-        return response.choices[0].message.content
+        """
+        Send a chat completion request via the Groq SDK.
+
+        Retries automatically on transient network errors using the
+        settings-driven tenacity decorator.
+        """
+        logger.debug("Groq chat | model=%s | user_chars=%d", self._model, len(user_prompt))
+        try:
+            response = self._client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=settings.llm_temperature,
+                max_tokens=settings.llm_max_tokens,
+                timeout=settings.llm_timeout_seconds,
+            )
+            content = response.choices[0].message.content
+            logger.debug("Groq response received | chars=%d", len(content or ""))
+            return content or ""
+        except Exception as exc:
+            logger.error("Groq API error: %s", exc, exc_info=True)
+            raise
 
 
 # ──────────────────────────────────────────────────────────────
-# Ollama Client (fully local fallback)
+# Ollama Client
 # ──────────────────────────────────────────────────────────────
 
 class OllamaClient(LLMClient):
     """LLM client using Ollama's local REST API."""
 
-    def __init__(self):
-        self.host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-        self.model = os.getenv("OLLAMA_MODEL", "llama3.1")
+    def __init__(self) -> None:
+        self._host = settings.ollama_host
+        self._model = settings.ollama_model
+        logger.info("OllamaClient initialised | host=%s | model=%s", self._host, self._model)
 
+    @_retry
     def chat(self, system_prompt: str, user_prompt: str) -> str:
-        """Send a chat completion request to the Ollama API."""
+        """
+        Send a chat completion request to the Ollama REST API.
+
+        Retries on Timeout and ConnectionError (Ollama can be slow to respond
+        on first model load). Timeout is driven by settings.llm_timeout_seconds.
+        """
+        logger.debug("Ollama chat | model=%s | user_chars=%d", self._model, len(user_prompt))
         response = requests.post(
-            f"{self.host}/api/chat",
+            f"{self._host}/api/chat",
             json={
-                "model": self.model,
+                "model": self._model,
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
                 "stream": False,
             },
-            timeout=120,  # Local models can be slow on first load
+            timeout=settings.llm_timeout_seconds,
         )
         response.raise_for_status()
-        return response.json()["message"]["content"]
+        content = response.json()["message"]["content"]
+        logger.debug("Ollama response received | chars=%d", len(content))
+        return content
 
 
 # ──────────────────────────────────────────────────────────────
@@ -140,57 +224,25 @@ class OllamaClient(LLMClient):
 
 def get_llm_client() -> LLMClient:
     """
-    Return the configured LLM client based on LLM_PROVIDER env var.
+    Return the configured LLM client based on the settings.llm_provider value.
 
     Defaults to Groq if not specified.
     """
-    provider = os.getenv("LLM_PROVIDER", "groq").lower().strip()
+    provider = settings.llm_provider
 
     if provider == "groq":
         return GroqClient()
     elif provider == "ollama":
         return OllamaClient()
     else:
+        # This should be caught by the validator in Settings, but guard anyway
         raise ValueError(
             f"Unknown LLM_PROVIDER: '{provider}'. Must be 'groq' or 'ollama'."
         )
 
 
 # ──────────────────────────────────────────────────────────────
-# Response Parser
-# ──────────────────────────────────────────────────────────────
-
-def parse_llm_response(text: str) -> tuple[str, str]:
-    """
-    Parse the LLM's structured response into (refined_prompt, explanation).
-
-    Expected format:
-        REFINED PROMPT: <prompt text>
-        WHY: <explanation text>
-
-    Falls back gracefully if the LLM doesn't follow the format exactly.
-    """
-    refined_prompt = ""
-    explanation = ""
-
-    text = text.strip()
-
-    if "REFINED PROMPT:" in text and "WHY:" in text:
-        parts = text.split("WHY:", 1)
-        refined_prompt = parts[0].replace("REFINED PROMPT:", "").strip()
-        explanation = parts[1].strip()
-    elif "REFINED PROMPT:" in text:
-        refined_prompt = text.split("REFINED PROMPT:", 1)[1].strip()
-        explanation = "The prompt was refined using best practices for clarity and specificity."
-    else:
-        refined_prompt = text
-        explanation = "The prompt was refined using best practices for clarity and specificity."
-
-    return refined_prompt, explanation
-
-
-# ──────────────────────────────────────────────────────────────
-# Main Refinement Function
+# Standard Refinement Pipeline
 # ──────────────────────────────────────────────────────────────
 
 def refine_prompt(
@@ -201,140 +253,105 @@ def refine_prompt(
     similar_past_prompts: list[str] | None = None,
 ) -> tuple[str, str]:
     """
-    Refine a raw prompt using RAG-retrieved context and an LLM.
+    Refine a raw prompt using RAG-retrieved context, HF domain signals, and an LLM.
+
+    Pipeline:
+      1. Extract domain-specific signals via HuggingFace specialist pipeline.
+      2. Build the structured user message from app.prompts templates.
+      3. Call the LLM with retry/timeout strategy.
+      4. Parse and return (refined_prompt, explanation).
 
     Args:
         raw_prompt:           The user's original, rough prompt.
-        technique:            Retrieved prompt-engineering technique (from ChromaDB).
-        domain_tip:           Retrieved domain-specific best practice (from ChromaDB).
-        user_profile:         The user's stored profile (domain, interests, bio).
-        similar_past_prompts: Optional list of the user's past similar prompts,
-                              used to identify recurring patterns and personalize further.
+        technique:            Retrieved prompt-engineering technique dict.
+        domain_tip:           Retrieved domain-specific best practice dict.
+        user_profile:         The user's stored profile dict.
+        similar_past_prompts: Optional list of the user's past similar prompts.
 
     Returns:
         Tuple of (refined_prompt, explanation).
     """
-    user_message = _build_user_message(
-        raw_prompt, technique, domain_tip, user_profile,
-        similar_past_prompts or [],
+    from app.hf_pipeline import extract_domain_signals
+
+    domain = user_profile.get("domain", "")
+    logger.info(
+        "refine_prompt | user=%s | domain=%s | prompt_chars=%d",
+        user_profile.get("user_id", "?"),
+        domain,
+        len(raw_prompt),
     )
 
+    # Step 1: Extract HuggingFace domain signals (lazy, graceful fallback)
+    hf_signals = extract_domain_signals(raw_prompt, domain)
+    if hf_signals:
+        logger.debug("HF signals extracted for domain=%s: %s", domain, list(hf_signals.keys()))
+
+    # Step 2: Build prompt using the template from app.prompts
+    kwargs = build_template_kwargs(
+        raw_prompt=raw_prompt,
+        technique=technique,
+        domain_tip=domain_tip,
+        user_profile=user_profile,
+        similar_past_prompts=similar_past_prompts or [],
+        hf_signals=hf_signals if hf_signals else None,
+    )
+    system_msg = REFINE_TEMPLATE.system.replace("$domain_persona", kwargs["domain_persona"])
+    user_msg = REFINE_TEMPLATE.render_user(**kwargs)
+
+    # Step 3: LLM call (with retry)
     client = get_llm_client()
-    response_text = client.chat(SYSTEM_PROMPT, user_message)
+    response_text = client.chat(system_msg, user_msg)
 
-    return parse_llm_response(response_text)
+    # Step 4: Parse response
+    refined, explanation = parse_llm_response(response_text)
+    logger.info(
+        "Refinement complete | refined_chars=%d | explanation_chars=%d",
+        len(refined),
+        len(explanation),
+    )
+    return refined, explanation
 
 
-def _build_user_message(
-    raw_prompt: str,
-    technique: dict,
-    domain_tip: dict,
-    user_profile: dict,
-    similar_past_prompts: list[str],
-) -> str:
-    """Assemble the user message with all RAG-retrieved context.
+# ──────────────────────────────────────────────────────────────
+# Arabic Translation — HF Primary, LLM Fallback
+# ──────────────────────────────────────────────────────────────
 
-    Injects all v2.1 profile fields so the LLM can calibrate vocabulary,
-    tone, format, tooling references, and topic constraints.
+def translate_prompt_to_english(arabic_prompt: str) -> str:
     """
+    Translate an Arabic prompt to English.
 
-    interests = ", ".join(user_profile.get("interests", []))
-    bio = user_profile.get("bio", "Not provided")
+    Strategy:
+      1. Try HuggingFace Helsinki-NLP/opus-mt-ar-en (local, free, fast).
+      2. If HF is disabled or fails, fall back to the configured LLM.
 
-    # ── Extended profile fields (v2.1) ──────────────────────────────────────
-    experience_level = user_profile.get("experience_level", "intermediate")
-    tone_preference = user_profile.get("tone_preference", "balanced")
-    output_format = user_profile.get("output_format_preference", "paragraph")
-    preferred_language = user_profile.get("preferred_language", "English")
-    goal = user_profile.get("goal") or "Not specified"
-    tools = ", ".join(user_profile.get("tools", [])) or "Not specified"
-    avoid_topics = ", ".join(user_profile.get("avoid_topics", [])) or "None"
+    Args:
+        arabic_prompt: The raw Arabic text to translate.
 
-    # Build the past-prompts section only when history exists
-    history_section = ""
-    if similar_past_prompts:
-        formatted = "\n".join(f"  - {p}" for p in similar_past_prompts)
-        history_section = f"""
-## SIMILAR PAST PROMPTS FROM THIS USER:
-(Use these to identify recurring weaknesses or patterns to proactively address)
-{formatted}
-"""
+    Returns:
+        English translation string.
+    """
+    from app.hf_pipeline import translate_arabic_hf
 
-    return f"""## RAW PROMPT TO REFINE:
-{raw_prompt}
+    logger.info("translate_prompt_to_english | chars=%d", len(arabic_prompt))
 
-## PROMPT-ENGINEERING TECHNIQUE TO APPLY:
-**{technique.get('title', 'N/A')}**
-When to use: {technique.get('when_to_use', 'N/A')}
-How: {technique.get('technique', 'N/A')}
-Example before: {technique.get('example_before', 'N/A')}
-Example after: {technique.get('example_after', 'N/A')}
+    # Primary: HuggingFace local model
+    hf_result = translate_arabic_hf(arabic_prompt)
+    if hf_result:
+        logger.info("Translation completed via HuggingFace model.")
+        return hf_result
 
-## DOMAIN-SPECIFIC BEST PRACTICE:
-**{domain_tip.get('title', 'N/A')}**
-Guidance: {domain_tip.get('guidance', 'N/A')}
-
-## USER PROFILE:
-Domain: {user_profile.get('domain', 'N/A')}
-Experience level: {experience_level}  ← calibrate vocabulary and depth accordingly
-Tone preference: {tone_preference}  ← match this register in the refined prompt
-Output format preference: {output_format}  ← structure the prompt's expected output this way
-Preferred language: {preferred_language}  ← write the refined prompt in this language
-Interests: {interests or 'Not specified'}
-Bio: {bio}
-Goal / Project context: {goal}
-Tools & Technologies: {tools}
-Avoid topics / constraints: {avoid_topics}
-{history_section}
-Now rewrite the raw prompt following the technique and domain tip above, fully personalized to this user's profile. Use the exact output format specified in your instructions."""
+    # Fallback: LLM-based translation
+    logger.info("HF translation unavailable — falling back to LLM.")
+    client = get_llm_client()
+    user_msg = TRANSLATE_TEMPLATE.render_user(arabic_prompt=arabic_prompt)
+    result = client.chat(TRANSLATE_TEMPLATE.system, user_msg).strip()
+    logger.info("LLM fallback translation complete | chars=%d", len(result))
+    return result
 
 
 # ──────────────────────────────────────────────────────────────
 # Arabic Translate + Refine Pipeline
 # ──────────────────────────────────────────────────────────────
-
-_TRANSLATE_SYSTEM_PROMPT = """You are a bilingual AI assistant fluent in Arabic and English.
-Your task is to translate an Arabic prompt into clear, natural English.
-
-RULES:
-- Produce a faithful, literal translation — do not add, remove, or interpret meaning.
-- Preserve the original intent and all specific details.
-- Output ONLY the English translation with no preamble, explanation, or quotes.
-"""
-
-_ARABIC_REFINE_SYSTEM_PROMPT = """You are an expert prompt engineer. Your task is to take an English translation of an originally Arabic prompt and rewrite it into a highly effective, specific, professional English prompt.
-
-You have been given:
-1. The original Arabic prompt (for reference and intent verification)
-2. Its English translation (the base text to refine)
-3. A PROMPT-ENGINEERING TECHNIQUE to apply
-4. A DOMAIN-SPECIFIC BEST PRACTICE relevant to the user's field
-5. The USER'S PROFILE (domain, interests, bio) for personalization
-
-RULES:
-- Rewrite the translated English prompt using the technique and domain tip.
-- Personalize it based on the user's domain, interests, and bio where relevant.
-- The refined prompt must be significantly more specific, actionable, and professional.
-- Write entirely in English — this is the desired output language.
-- Do NOT just add generic filler — every addition should serve a clear purpose.
-
-OUTPUT FORMAT (follow exactly):
-REFINED PROMPT: <your rewritten prompt here>
-WHY: <1-2 sentences explaining what specific changes you made and why they improve the prompt>
-"""
-
-
-def translate_prompt_to_english(arabic_prompt: str) -> str:
-    """
-    Translate an Arabic prompt to English literally.
-    Groq's llama-3.1-8b-instant handles Arabic natively — no extra library needed.
-    """
-    client = get_llm_client()
-    translation_user_msg = (
-        f"Translate the following Arabic prompt to English:\n\n{arabic_prompt}"
-    )
-    return client.chat(_TRANSLATE_SYSTEM_PROMPT, translation_user_msg).strip()
-
 
 def translate_and_refine(
     arabic_prompt: str,
@@ -348,97 +365,60 @@ def translate_and_refine(
     Refine the translated English text using RAG-augmented context,
     with reference to the original Arabic prompt.
 
+    Pipeline:
+      1. Extract HF domain signals from the English translation.
+      2. Build the Arabic-refinement user message from app.prompts templates.
+      3. Call the LLM with retry/timeout strategy.
+      4. Parse and return (refined_prompt, explanation).
+
     Args:
         arabic_prompt:        The original Arabic raw prompt.
-        translated_english:   The literal translation from translate_prompt_to_english().
-        technique:            Retrieved prompt-engineering technique (from ChromaDB).
-        domain_tip:           Retrieved domain-specific best practice.
-        user_profile:         The user's stored profile.
+        translated_english:   The literal translation (from translate_prompt_to_english).
+        technique:            Retrieved prompt-engineering technique dict.
+        domain_tip:           Retrieved domain-specific best practice dict.
+        user_profile:         The user's stored profile dict.
         similar_past_prompts: Optional list of the user's past similar prompts.
 
     Returns:
         Tuple of (refined_prompt, explanation).
     """
-    client = get_llm_client()
+    from app.hf_pipeline import extract_domain_signals
 
-    user_message = _build_arabic_refine_message(
-        arabic_prompt=arabic_prompt,
-        translated_english=translated_english,
+    domain = user_profile.get("domain", "")
+    logger.info(
+        "translate_and_refine | user=%s | domain=%s",
+        user_profile.get("user_id", "?"),
+        domain,
+    )
+
+    # Step 1: Extract HF signals from the English translation
+    hf_signals = extract_domain_signals(translated_english, domain)
+
+    # Step 2: Build the Arabic-refinement prompt
+    kwargs = build_template_kwargs(
+        raw_prompt=translated_english,  # base text for template
         technique=technique,
         domain_tip=domain_tip,
         user_profile=user_profile,
         similar_past_prompts=similar_past_prompts or [],
+        hf_signals=hf_signals if hf_signals else None,
     )
-    response_text = client.chat(_ARABIC_REFINE_SYSTEM_PROMPT, user_message)
-    refined_prompt, explanation = parse_llm_response(response_text)
+    # Inject Arabic-specific fields
+    kwargs["arabic_prompt"] = arabic_prompt
+    kwargs["translated_english"] = translated_english
 
-    return refined_prompt, explanation
+    system_msg = ARABIC_REFINE_TEMPLATE.system.replace(
+        "$domain_persona", kwargs["domain_persona"]
+    )
+    user_msg = ARABIC_REFINE_TEMPLATE.render_user(**kwargs)
 
+    # Step 3: LLM call (with retry)
+    client = get_llm_client()
+    response_text = client.chat(system_msg, user_msg)
 
-def _build_arabic_refine_message(
-    arabic_prompt: str,
-    translated_english: str,
-    technique: dict,
-    domain_tip: dict,
-    user_profile: dict,
-    similar_past_prompts: list[str],
-) -> str:
-    """Assemble the Arabic-pipeline user message with translation + RAG context.
-
-    Mirrors _build_user_message() — includes all v2.1 extended profile fields
-    for consistent personalization across both pipelines.
-    """
-
-    interests = ", ".join(user_profile.get("interests", []))
-    bio = user_profile.get("bio", "Not provided")
-
-    # ── Extended profile fields (v2.1) ──────────────────────────────────────
-    experience_level = user_profile.get("experience_level", "intermediate")
-    tone_preference = user_profile.get("tone_preference", "balanced")
-    output_format = user_profile.get("output_format_preference", "paragraph")
-    preferred_language = user_profile.get("preferred_language", "English")
-    goal = user_profile.get("goal") or "Not specified"
-    tools = ", ".join(user_profile.get("tools", [])) or "Not specified"
-    avoid_topics = ", ".join(user_profile.get("avoid_topics", [])) or "None"
-
-    history_section = ""
-    if similar_past_prompts:
-        formatted = "\n".join(f"  - {p}" for p in similar_past_prompts)
-        history_section = f"""
-## SIMILAR PAST PROMPTS FROM THIS USER (in English):
-{formatted}
-"""
-
-    return f"""## ORIGINAL ARABIC PROMPT:
-{arabic_prompt}
-
-## ENGLISH TRANSLATION:
-{translated_english}
-
-## PROMPT-ENGINEERING TECHNIQUE TO APPLY:
-**{technique.get('title', 'N/A')}**
-When to use: {technique.get('when_to_use', 'N/A')}
-How: {technique.get('technique', 'N/A')}
-Example before: {technique.get('example_before', 'N/A')}
-Example after: {technique.get('example_after', 'N/A')}
-
-## DOMAIN-SPECIFIC BEST PRACTICE:
-**{domain_tip.get('title', 'N/A')}**
-Guidance: {domain_tip.get('guidance', 'N/A')}
-
-## USER PROFILE:
-Domain: {user_profile.get('domain', 'N/A')}
-Experience level: {experience_level}  ← calibrate vocabulary and depth accordingly
-Tone preference: {tone_preference}  ← match this register in the refined prompt
-Output format preference: {output_format}  ← structure the prompt's expected output this way
-Preferred language: {preferred_language}  ← write the refined prompt in this language
-Interests: {interests or 'Not specified'}
-Bio: {bio}
-Goal / Project context: {goal}
-Tools & Technologies: {tools}
-Avoid topics / constraints: {avoid_topics}
-{history_section}
-Rewrite the English translation into a polished, professional, domain-specific prompt. Use the exact output format specified in your instructions."""
-
-
-
+    # Step 4: Parse response
+    refined, explanation = parse_llm_response(response_text)
+    logger.info(
+        "Arabic refinement complete | refined_chars=%d", len(refined)
+    )
+    return refined, explanation
