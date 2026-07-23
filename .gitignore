@@ -20,3 +20,4 @@ feedback/
 
 # Promoted examples log (generated at runtime from user sessions)
 data/promoted_examples.jsonl
+logs/proref.log

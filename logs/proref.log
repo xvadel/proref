@@ -30,3 +30,6 @@
 2026-07-23T04:26:31 | INFO     | app.llm | GroqClient initialised | model=llama-3.1-8b-instant
 2026-07-23T04:26:33 | INFO     | app.llm | Refinement complete | refined_chars=1803 | explanation_chars=340
 2026-07-23T04:26:33 | INFO     | app.feedback | Refinement logged | refinement_id=697ac7e9 | user=mohamed | source=refine
+2026-07-23T04:46:26 | INFO     | app.main | Onboarding user | user_id=adel | domain=creative_writing
+2026-07-23T04:46:26 | INFO     | app.rag | User profile stored | user_id=adel | domain=creative_writing
+2026-07-23T04:56:18 | INFO     | app.main | Server shutting down gracefully.
