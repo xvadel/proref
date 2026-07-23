@@ -1,0 +1,14 @@
+2026-07-23T04:18:34 | INFO     | root | Logging initialised | level=INFO | file=D:\PROJECTS\proref\logs\proref.log
+2026-07-23T04:18:34 | INFO     | test | Logging OK
+2026-07-23T04:18:49 | INFO     | root | Logging initialised | level=INFO | file=D:\PROJECTS\proref\logs\proref.log
+2026-07-23T04:19:00 | INFO     | root | Logging initialised | level=INFO | file=D:\PROJECTS\proref\logs\proref.log
+2026-07-23T04:19:25 | WARNING  | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-07-23T04:19:42 | INFO     | root | Logging initialised | level=INFO | file=D:\PROJECTS\proref\logs\proref.log
+2026-07-23T04:19:48 | WARNING  | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-07-23T04:19:53 | INFO     | app.main | Starting Personalized Prompt Refiner...
+2026-07-23T04:19:53 | INFO     | app.rag | Ingesting knowledge base into ChromaDB...
+2026-07-23T04:19:53 | INFO     | app.rag | Ingested 9 prompt techniques.
+2026-07-23T04:19:53 | INFO     | app.rag | Ingested 18 domain knowledge entries.
+2026-07-23T04:19:54 | INFO     | app.feedback | Updated success_rate for 2 techniques in ChromaDB.
+2026-07-23T04:19:54 | INFO     | app.rag | Knowledge base ingestion complete.
+2026-07-23T04:19:54 | INFO     | app.main | Server ready — all systems operational.
