@@ -2,49 +2,45 @@
   <img src="frontend/assets/logo.png" alt="ProRef AI Logo" width="300" />
 </p>
 
-<h1 align="center">PROREF AI — Personalized Prompt Refiner</h1>
+<h1 align="center">PROREF AI — Personalized Prompt Refiner (v3.0)</h1>
 
 <p align="center">
-  <strong>Transform vague prompts into precise, domain-specific, personalized prompts — with a learning loop that gets smarter with every rating.</strong>
+  <strong>Transform vague prompts into precise, domain-specific, personalized prompts — with domain-specialized AI models and a self-learning feedback loop.</strong>
 </p>
 
 <p align="center">
-  A RAG-powered web app (v2.0) that retrieves the best prompt-engineering technique and domain-specific best practice for your input, then uses an LLM to rewrite your prompt personalized to your profile. The system <em>learns</em> from your feedback and self-expands its knowledge base over time.
+  A RAG-powered web app (v3.0) that retrieves the best prompt-engineering technique and domain-specific best practice for your input, pre-processes context using HuggingFace specialist models, and rewrites your prompt personalized to your profile and expert domain persona.
 </p>
 
 <p align="center">
-  Built with FastAPI · ChromaDB · Sentence Transformers · Groq / Ollama
+  Built with FastAPI · Pydantic Settings · ChromaDB · Sentence Transformers · HuggingFace Transformers · Tenacity · Groq / Ollama
 </p>
 
 ---
 
 ## What It Does
 
-1. **You create a profile** — your working domain (`dev` / `marketing` / `data_analysis`), interests, and an optional bio
-2. **You submit a rough prompt** — e.g. *"write me something about marketing"*
-3. **The system retrieves** (via RAG) the most relevant prompt-engineering technique + domain-specific best practice — **reranked by historical success rates from user feedback**
-4. **An LLM rewrites** your prompt using the retrieved context, personalized to your profile and your **past similar prompts**
-5. **You get back** the refined prompt + a "why it's better" explanation + tags showing which technique and domain tip were used
-6. **You rate it** 👍 or 👎 — good ratings update technique weights in ChromaDB and may **promote the pair into the knowledge base** automatically
-
-The transparent explanation and the learning loop are the key differentiators — this is **not** a black box, and it **improves with use**.
+1. **You create a profile** — your working domain (`dev`, `marketing`, `data_analysis`, `education`, `research`, `creative_writing`), experience level, tone preference, tools, and constraints.
+2. **You submit a rough prompt** — in English or Arabic (e.g., *"write me something about marketing"* or *"ساعدني في كتابة واجهة برمجية"*).
+3. **Local Arabic Translation** — Arabic prompts are translated locally via `Helsinki-NLP/opus-mt-ar-en` (with LLM fallback).
+4. **HuggingFace Signal Extraction** — Domain-specialized HF models (FinBERT, CodeBERT, BART, DistilBERT, GPT-2) analyze your prompt to extract sentiment, code context, financial tone, or condensed intent.
+5. **RAG Retrieval** — Retrieves the best prompt-engineering technique and domain best practice, **reranked by historical success rates from user feedback**.
+6. **Domain Persona Synthesis** — An LLM rewrites your prompt using a specialized domain persona (e.g., Senior Software Architect, CMO-level Strategist), rendered safely via `app/prompts.py`.
+7. **You rate it** 👍 or 👎 — good ratings update technique weights in ChromaDB and **promote validated examples into the knowledge base**.
 
 ---
 
-## What's New in v2.0
+## What's New in v3.0
 
 | Feature | Description |
 |---|---|
-| **Feedback Loop** | `POST /feedback` lets users rate refinements `"good"` or `"bad"` |
-| **Feedback-Aware Reranking** | Technique success rates are updated in ChromaDB after every rating — better techniques get picked more often |
-| **Self-Expanding RAG** | "Good" refinements that meet quality thresholds are automatically promoted into the `domain_knowledge` collection as validated examples |
-| **Prompt History** | Every raw prompt is embedded in `user_prompt_history`; similar past prompts are injected into the LLM context for deeper personalization |
-| **Arabic → English Pipeline** | `POST /translate-refine` accepts an Arabic prompt, translates it literally, then refines the translation using the full RAG pipeline |
-| **Refinement History** | `GET /history/{user_id}` returns a user's past refinements with ratings |
-| **Background Processing** | Success rate updates run in a background thread so they never block API responses |
-| **Success Rate Persistence** | Learned technique weights survive server restarts (stored in ChromaDB metadata) |
-| **Idempotent KB Promotion** | Each refinement can only be promoted to the knowledge base once (UUID-keyed, checked before upsert) |
-| **New UI (v2.0)** | Redesigned dark workspace with sidebar navigation, tabbed views (Refine / Arabic / History), and inline feedback buttons |
+| **Centralized Config (`app/config.py`)** | Pydantic Settings manages all tunables (temperature, max tokens, timeouts, retries, log levels, vector DB paths, HF models) from `.env`. |
+| **Isolated Prompt Engine (`app/prompts.py`)** | Single source of truth for system prompts, user templates, and **Domain Expert Personas** (`dev`, `marketing`, `data_analysis`, `education`, `research`, `creative_writing`). |
+| **HuggingFace Specialist Pipelines (`app/hf_pipeline.py`)** | Lazy-loaded HF models pre-process inputs: FinBERT for business tone, CodeBERT for dev context, BART for intent summary/zero-shot, DistilBERT for data sentiment, GPT-2 for creative seeds. |
+| **Local Arabic Translation** | Integrated `Helsinki-NLP/opus-mt-ar-en` for fast, offline Arabic-to-English translation (with LLM fallback). |
+| **Tenacity Retry & Backoff** | Exponential backoff retries for Groq/Ollama API calls to handle rate limits and transient network timeouts automatically. |
+| **Structured Logging (`app/logging_config.py`)** | Rotating log file system (`logs/proref.log`) with colored console logging. Zero unhandled `print()` statements. |
+| **Graceful Degradation** | Set `HF_USE_PIPELINE=false` in `.env` to disable HuggingFace pipelines instantly on low-RAM machines. |
 
 ---
 
@@ -52,17 +48,33 @@ The transparent explanation and the learning loop are the key differentiators �
 
 ![ProRef AI System Architecture](frontend/assets/architecture_diagram.png)
 
+```
+[ User Input (English / Arabic) ]
+             │
+             ├──> [ Arabic Translation: Helsinki-NLP / LLM Fallback ]
+             │
+             ├──> [ HF Domain Signals: FinBERT / CodeBERT / BART / DistilBERT ]
+             │
+             ├──> [ RAG Retrieval: Feedback-Aware Reranked Techniques + Domain Tips ]
+             │
+             └──> [ LLM Prompt Synthesis with Domain Expert Personas ]
+                          │
+                          ▼
+            [ Refined Prompt + Explanation ]
+                          │
+                          ▼
+            [ 👍/👎 Feedback → ChromaDB Rerank & KB Promotion ]
+```
+
+### Endpoints
+
 | Endpoint | Module | Description |
 |---|---|---|
 | `POST /onboard` | `main.py` → `rag.py` | Stores user profile to disk + ChromaDB |
-| `POST /refine` | `main.py` → `rag.py` → `llm.py` → `feedback.py` | Full RAG + LLM refinement pipeline |
-| `POST /translate-refine` | `main.py` → `llm.py` → `rag.py` → `feedback.py` | Arabic translation + RAG refinement |
+| `POST /refine` | `main.py` → `rag.py` → `hf_pipeline.py` → `llm.py` | Full RAG + HF signals + LLM refinement pipeline |
+| `POST /translate-refine` | `main.py` → `hf_pipeline.py` / `llm.py` → `rag.py` | Local HF Arabic translation + RAG refinement |
 | `POST /feedback` | `main.py` → `feedback.py` (background) | Rates a refinement, updates success rates, may promote to KB |
 | `GET /history/{user_id}` | `main.py` → `feedback.py` | Returns a user's past refinements with ratings |
-
-### The Learning Loop
-
-![ProRef AI Learning Loop](frontend/assets/learning_loop_diagram.png)
 
 ---
 
@@ -71,11 +83,14 @@ The transparent explanation and the learning loop are the key differentiators �
 | Layer | Technology | Cost |
 |---|---|---|
 | Backend | FastAPI + Uvicorn | Free |
+| Configuration | Pydantic Settings (`pydantic-settings`) | Free |
 | Vector DB | ChromaDB (persistent local) | Free |
-| Embeddings | `all-MiniLM-L6-v2` via sentence-transformers | Free |
+| Local Embeddings | `all-MiniLM-L6-v2` via sentence-transformers | Free |
+| Specialist Models | HuggingFace Transformers (MarianMT, FinBERT, CodeBERT, BART, DistilBERT, GPT-2) | Free |
+| Resilience | Tenacity (exponential backoff retry) | Free |
 | LLM | Groq (default) or Ollama (local) | Free |
-| Frontend | Vanilla HTML/Tailwind CSS/JS — no build step | Free |
-| Storage | JSONL files on disk + ChromaDB | Free |
+| Logging | Python `logging` + `colorlog` + rotating file handler | Free |
+| Frontend | Vanilla HTML/CSS/JS SPA | Free |
 
 **Total cost to run: $0.** No paid APIs required.
 
@@ -102,7 +117,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> **Note:** On first run, `sentence-transformers` will download the `all-MiniLM-L6-v2` model (~80 MB). This is automatic and only happens once.
+> **Note:** Models are downloaded automatically on first use. You can also run with `uv` (`uv pip install -r requirements.txt`).
 
 ### 3. Configure Environment
 
@@ -110,27 +125,34 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` and set your LLM provider:
+Edit `.env` to customize settings:
 
-**Option A — Groq (recommended, default):**
-1. Get a free API key at [console.groq.com](https://console.groq.com)
-2. Set `GROQ_API_KEY=your_key_here` in `.env`
-3. Optionally change `GROQ_MODEL` (default: `llama-3.1-8b-instant`)
+```env
+# LLM Provider: "groq" or "ollama"
+LLM_PROVIDER=groq
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=llama-3.1-8b-instant
 
-**Option B — Ollama (fully local, no API key):**
-1. Install Ollama from [ollama.ai](https://ollama.ai)
-2. Pull a model: `ollama pull llama3.1`
-3. Set `LLM_PROVIDER=ollama` in `.env`
+# Shared Model Parameters
+LLM_TEMPERATURE=0.7
+LLM_MAX_TOKENS=1024
+LLM_TIMEOUT_SECONDS=60
+LLM_MAX_RETRIES=3
+
+# HuggingFace Specialist Models Switch
+HF_USE_PIPELINE=true
+
+# Logging Level (DEBUG | INFO | WARNING | ERROR)
+LOG_LEVEL=INFO
+```
 
 ### 4. Run the App
 
 ```bash
-.venv\Scripts\uvicorn app.main:app --reload   # Windows
-# or
-uvicorn app.main:app --reload                 # macOS/Linux (if venv is active)
+uvicorn app.main:app --reload
 ```
 
-Open **http://localhost:8000** in your browser. The knowledge base is automatically ingested on startup — no manual steps needed.
+Open **http://localhost:8000** in your browser. The knowledge base is automatically ingested on startup, and rotating log entries write to `logs/proref.log`.
 
 ---
 
@@ -144,14 +166,23 @@ curl -X POST http://localhost:8000/onboard \
   -d '{
     "user_id": "alice",
     "domain": "dev",
+    "experience_level": "expert",
+    "tone_preference": "formal",
+    "output_format_preference": "code",
     "interests": ["python", "rag", "fastapi"],
-    "bio": "CS student building AI-powered tools"
+    "tools": ["FastAPI", "Docker", "PostgreSQL"],
+    "bio": "Senior AI systems engineer"
   }'
 ```
 
 **Response:**
 ```json
-{ "user_id": "alice", "status": "onboarded" }
+{
+  "user_id": "alice",
+  "domain": "dev",
+  "experience_level": "expert",
+  "status": "onboarded"
+}
 ```
 
 ---
@@ -168,8 +199,8 @@ curl -X POST http://localhost:8000/refine \
 ```json
 {
   "refinement_id": "550e8400-e29b-41d4-a716-446655440000",
-  "refined_prompt": "You are a senior Python backend engineer...",
-  "explanation": "Added a specific tech stack, role persona, and success criteria...",
+  "refined_prompt": "You are a senior software engineer...",
+  "explanation": "Added tech stack constraints, structured code output, and role persona...",
   "technique_used": "Role / Persona Setting",
   "domain_tip_used": "Specify Tech Stack & Constraints"
 }
@@ -177,7 +208,7 @@ curl -X POST http://localhost:8000/refine \
 
 ---
 
-### `POST /translate-refine` — Arabic Prompt → Refined English *(new)*
+### `POST /translate-refine` — Arabic Prompt → Refined English
 
 ```bash
 curl -X POST http://localhost:8000/translate-refine \
@@ -191,7 +222,7 @@ curl -X POST http://localhost:8000/translate-refine \
   "refinement_id": "...",
   "original_arabic": "ساعدني في كتابة واجهة برمجية",
   "translated_english": "Help me write an API",
-  "refined_prompt": "You are a senior Python backend engineer...",
+  "refined_prompt": "You are a senior software engineer...",
   "explanation": "...",
   "technique_used": "Role / Persona Setting",
   "domain_tip_used": "Specify Tech Stack & Constraints"
@@ -200,7 +231,7 @@ curl -X POST http://localhost:8000/translate-refine \
 
 ---
 
-### `POST /feedback` — Rate a Refinement *(new)*
+### `POST /feedback` — Rate a Refinement
 
 ```bash
 curl -X POST http://localhost:8000/feedback \
@@ -221,34 +252,12 @@ curl -X POST http://localhost:8000/feedback \
 }
 ```
 
-> `promoted_to_kb: true` means this refinement was added to the knowledge base as a validated example, making future refinements for similar prompts better.
-
 ---
 
-### `GET /history/{user_id}` — Refinement History *(new)*
+### `GET /history/{user_id}` — Refinement History
 
 ```bash
 curl http://localhost:8000/history/alice?limit=10
-```
-
-**Response:**
-```json
-{
-  "user_id": "alice",
-  "total": 3,
-  "entries": [
-    {
-      "refinement_id": "...",
-      "raw_prompt": "help me write a REST API",
-      "refined_prompt": "You are a senior Python backend engineer...",
-      "technique_used": "Role / Persona Setting",
-      "domain_tip_used": "Specify Tech Stack & Constraints",
-      "rating": "good",
-      "timestamp": "2026-07-07T01:09:42+00:00",
-      "source": "refine"
-    }
-  ]
-}
 ```
 
 ---
@@ -259,68 +268,39 @@ curl http://localhost:8000/history/alice?limit=10
 proref/
 ├── app/
 │   ├── __init__.py          # Package init
-│   ├── main.py              # FastAPI app, all routes, lifespan startup
-│   ├── models.py            # Pydantic request/response schemas (all endpoints)
-│   ├── rag.py               # ChromaDB setup, ingestion, feedback-aware retrieval
-│   ├── llm.py               # Pluggable LLM client (Groq / Ollama) + Arabic pipeline
-│   └── feedback.py          # Feedback log, success-rate computation, KB promotion
+│   ├── config.py            # Pydantic Settings (centralized configuration)
+│   ├── logging_config.py    # Structured rotating file & console logger
+│   ├── prompts.py           # Single source of truth for templates & personas
+│   ├── hf_pipeline.py       # HuggingFace specialist pipeline registry
+│   ├── main.py              # FastAPI application & route declarations
+│   ├── models.py            # Pydantic data schemas & validators
+│   ├── rag.py               # ChromaDB retrieval & feedback-aware reranking
+│   ├── llm.py               # Groq / Ollama client adapters with Tenacity retry
+│   └── feedback.py          # Feedback store, success-rate calculation & KB promotion
 ├── data/
-│   ├── prompt_techniques.json         # Prompt-engineering techniques
-│   ├── promoted_examples.jsonl        # Audit log of KB-promoted refinements
+│   ├── prompt_techniques.json
+│   ├── promoted_examples.jsonl
 │   └── domain_knowledge/
-│       ├── dev.json                   # Software dev best practices
-│       ├── marketing.json             # Marketing best practices
-│       └── data_analysis.json         # Data analysis best practices
-├── feedback/                          # Created at runtime (gitignored)
-│   └── {user_id}.jsonl               # Per-user append-only feedback logs
+│       ├── dev.json
+│       ├── marketing.json
+│       ├── data_analysis.json
+│       ├── education.json
+│       ├── research.json
+│       └── creative_writing.json
+├── logs/                    # Created at runtime (gitignored)
+│   └── proref.log           # Rotating application logs
+├── feedback/                # Created at runtime (gitignored)
+├── user_profiles/           # Created at runtime (gitignored)
+├── chroma_db/               # Created at runtime (gitignored)
 ├── frontend/
-│   ├── index.html           # Dark-themed SPA (Onboarding + Workspace)
-│   └── logo.png             # App logo (served at /static/logo.png)
-├── user_profiles/            # Created at runtime (gitignored)
-│   └── {user_id}.json       # User profile JSON files
-├── chroma_db/                # Created at runtime (gitignored)
-├── scripts/
-│   └── ingest.py             # Manual knowledge base re-ingestion script
+│   ├── index.html           # SPA Frontend UI
+│   └── assets/
 ├── requirements.txt
 ├── pyproject.toml
 ├── .env.example
 ├── .gitignore
 └── README.md
 ```
-
----
-
-## How RAG Works Here
-
-![RAG Refinement Pipeline](frontend/rag_pipeline_diagram.png)
-
-### On Startup
-- `prompt_techniques.json` and `data/domain_knowledge/*.json` are upserted into ChromaDB
-- Existing **success rates** from feedback logs are re-applied to technique metadata so learned weights **survive server restarts**
-
-### Key Design Decisions
-
-| Decision | Why |
-|---|---|
-| Retrieve top-3, then rerank by `success_rate` | Pure similarity misses real-world effectiveness; success rates add a human signal |
-| Retrieve similar past prompts **before** embedding | Avoids the current prompt appearing in its own history results (self-match bug) |
-| Promote to `domain_knowledge` (not a separate collection) | Promoted examples are retrieved by the same `retrieve_domain_tip()` path — no extra code |
-| Background thread for success rate updates | Keeps the `/feedback` response instant; ChromaDB writes are non-blocking |
-| UUID-keyed idempotency for promotions | Re-running `/feedback` with `"good"` won't create duplicate KB entries |
-
----
-
-## Arabic Support
-
-`POST /translate-refine` enables a **two-LLM-call pipeline** for Arabic prompts:
-
-1. **Translate**: LLM converts the Arabic prompt to a literal English translation (faithfully, no interpretation)
-2. **Retrieve**: The English translation is used for RAG lookups (techniques + domain tips)
-3. **Retrieve history**: Similar past English prompts from the user are fetched for personalization
-4. **Refine**: A second LLM call rewrites the translation into a polished, professional English prompt using all context
-5. **Log**: Stored as `source: "translate-refine"` for history and feedback tracking
-
-The model used (Groq's `llama-3.1-8b-instant`) handles Arabic natively — no extra library or translation API needed.
 
 ---
 
