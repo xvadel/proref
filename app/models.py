@@ -328,3 +328,66 @@ class HistoryResponse(BaseModel):
     user_id: str
     total: int
     entries: list[HistoryEntry]
+
+
+# ──────────────────────────────────────────────────────────────
+# Prompt Chat (iterative refinement)
+# ──────────────────────────────────────────────────────────────
+
+class ChatMessage(BaseModel):
+    """A single message in a prompt-chat conversation."""
+
+    role: Literal["user", "assistant"] = Field(
+        ...,
+        description="Who sent this message: 'user' or 'assistant'.",
+    )
+    content: str = Field(
+        ...,
+        min_length=1,
+        description="The message content.",
+    )
+
+
+class ChatRequest(BaseModel):
+    """Payload for sending a follow-up message in a refinement chat session."""
+
+    user_id: str = Field(
+        ...,
+        min_length=1,
+        description="Must match a previously onboarded user_id.",
+    )
+    refined_prompt: str = Field(
+        ...,
+        min_length=5,
+        description="The current refined prompt being iterated on.",
+    )
+    messages: list[ChatMessage] = Field(
+        default_factory=list,
+        description="Full conversation history so far (user + assistant turns).",
+    )
+    new_message: str = Field(
+        ...,
+        min_length=1,
+        description="The user's latest instruction or question about the refined prompt.",
+    )
+
+    @field_validator("user_id")
+    @classmethod
+    def sanitize_user_id(cls, v: str) -> str:
+        sanitized = re.sub(r"[^a-zA-Z0-9_\-]", "_", v).strip("_")
+        if not sanitized:
+            raise ValueError("user_id contains no valid characters.")
+        return sanitized
+
+
+class ChatResponse(BaseModel):
+    """The assistant's reply in a prompt-chat session."""
+
+    reply: str = Field(
+        ...,
+        description="The assistant's response or updated prompt version.",
+    )
+    updated_prompt: Optional[str] = Field(
+        default=None,
+        description="If the assistant produced an updated version of the prompt, it appears here.",
+    )

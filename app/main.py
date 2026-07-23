@@ -29,6 +29,7 @@ load_dotenv()
 
 from app.logging_config import get_logger
 from app.models import (
+    ChatRequest, ChatResponse,
     FeedbackRequest, FeedbackResponse,
     HistoryResponse,
     OnboardRequest, OnboardResponse,
@@ -392,6 +393,123 @@ async def submit_feedback(request: FeedbackRequest, background_tasks: Background
 # ──────────────────────────────────────────────────────────────
 # Routes — History
 # ──────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────
+# Routes — Profile Update (workspace settings)
+# ──────────────────────────────────────────────────────────────
+
+@app.post("/profile/update", response_model=OnboardResponse, summary="Update runtime profile settings")
+async def update_profile_settings(request: OnboardRequest):
+    """
+    Update a user's profile settings from the workspace panel.
+
+    Accepts the same payload as /onboard and calls store_user_profile,
+    allowing tone, output_format, preferred_language, and goal to be
+    changed without fully re-onboarding.
+    """
+    logger.info(
+        "POST /profile/update | user_id=%s | domain=%s",
+        request.user_id,
+        request.domain,
+    )
+    profile = request.model_dump()
+    store_user_profile(profile)
+    return OnboardResponse(
+        user_id=request.user_id,
+        domain=request.domain,
+        experience_level=request.experience_level,
+        status="updated",
+    )
+
+
+# ──────────────────────────────────────────────────────────────
+# Routes — Prompt Chat
+# ──────────────────────────────────────────────────────────────
+
+@app.post("/chat", response_model=ChatResponse, summary="Chat to iterate on a refined prompt")
+async def chat_on_prompt(request: ChatRequest):
+    """
+    Allow the user to have a follow-up conversation about a refined prompt,
+    requesting changes, asking questions, or requesting alternative versions.
+
+    The LLM receives:
+      - The current refined prompt as context
+      - The full conversation history (so the session is coherent)
+      - The user's new instruction
+
+    It replies with an updated or commented-on prompt.
+    If the reply contains an updated prompt block (marked UPDATED PROMPT:),
+    it is extracted and returned in updated_prompt separately.
+    """
+    logger.info(
+        "POST /chat | user_id=%s | history_turns=%d | msg_chars=%d",
+        request.user_id,
+        len(request.messages),
+        len(request.new_message),
+    )
+
+    profile = load_user_profile(request.user_id)
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"User '{request.user_id}' not found. Please onboard first via POST /onboard.",
+        )
+
+    system_prompt = """You are an expert prompt engineer assisting a user in iterating on a refined prompt.
+
+You have the current version of their prompt. The user will give you instructions such as:
+- "Make it more concise"
+- "Add a section about constraints"
+- "Change the tone to casual"
+- "Can you explain why you added X?"
+
+RULES:
+- If the user asks for a change, produce the updated prompt.
+- Format updated prompts with the exact marker: UPDATED PROMPT: <new prompt text>
+- If the user asks a question (not a change), answer it clearly without producing an updated prompt.
+- Be concise. Do not repeat the user's words.
+- Do NOT add generic padding."""
+
+    # Build conversation turns
+    history_text = ""
+    for msg in request.messages:
+        prefix = "User" if msg.role == "user" else "Assistant"
+        history_text += f"{prefix}: {msg.content}\n"
+
+    user_message = f"""Current refined prompt:
+===
+{request.refined_prompt}
+===
+
+Conversation so far:
+{history_text}
+User: {request.new_message}"""
+
+    try:
+        from app.llm import get_llm_client
+        client = get_llm_client()
+        raw_reply = client.chat(system_prompt, user_message)
+    except Exception as exc:
+        logger.error("Chat LLM call failed | user=%s | error=%s", request.user_id, exc, exc_info=True)
+        raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}")
+
+    # Extract UPDATED PROMPT if present
+    updated_prompt = None
+    if "UPDATED PROMPT:" in raw_reply:
+        parts = raw_reply.split("UPDATED PROMPT:", 1)
+        updated_prompt = parts[1].strip()
+        reply = parts[0].strip() or "Here is the updated prompt:"
+    else:
+        reply = raw_reply.strip()
+
+    logger.info(
+        "Chat reply | user=%s | has_update=%s | reply_chars=%d",
+        request.user_id,
+        updated_prompt is not None,
+        len(reply),
+    )
+    return ChatResponse(reply=reply, updated_prompt=updated_prompt)
+
 
 @app.get(
     "/history/{user_id}",

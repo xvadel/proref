@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  A RAG-powered web app (v3.0) that retrieves the best prompt-engineering technique and domain-specific best practice for your input, pre-processes context using HuggingFace specialist models, and rewrites your prompt personalized to your profile and expert domain persona.
+  A RAG-powered web app (v0.2) that retrieves the best prompt-engineering technique and domain-specific best practice for your input, pre-processes context using HuggingFace specialist models, and rewrites your prompt personalized to your profile and expert domain persona.
 </p>
 
 <p align="center">
